@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>shimokita — 下北沢コミュニティ</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="root">
+  <div class="screens">
+    <!-- HOME -->
+    <div class="screen active" id="home">
+      <div class="hero">
+        <div class="hero-eyebrow">🌿 下北沢コミュニティ</div>
+        <div class="hero-title">街が、<span>舞台</span>。<br>人が、主役。</div>
+        <div class="hero-desc">下北沢で開催されるイベントを通じて、あなたと街をつなぐ場所。</div>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="navigate('events')">🎉 イベントを見る</button>
+          <button class="btn-secondary" onclick="navigate('map')">🗺 マップ</button>
+        </div>
+      </div>
+
+      <div class="today-strip">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px;">
+          <div class="section-title" style="margin:0">今日のピックアップ</div>
+          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('events')">すべて見る →</div>
+        </div>
+        <div class="today-card" onclick="showDetail('3')">
+          <div class="today-emoji">🎯</div>
+          <div class="today-info">
+            <div class="today-badge">開催中</div>
+            <div class="today-title">下北沢まちビンゴ</div>
+            <div class="today-meta">〜7月20日 · 25店舗参加</div>
+          </div>
+          <div style="color:rgba(255,255,255,0.4);font-size:18px;">›</div>
+        </div>
+      </div>
+
+      <div class="home-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="section-title" style="margin:0">新着イベント</div>
+          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('events')">すべて見る →</div>
+        </div>
+        <div id="home-events"></div>
+      </div>
+
+      <div class="home-section" style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="section-title" style="margin:0">下北沢ニュース</div>
+          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('news')">すべて見る →</div>
+        </div>
+        <div class="news-scroll" id="home-news"></div>
+      </div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="screen" id="events">
+      <div class="screen-header">
+        <div class="screen-title">イベント</div>
+        <div class="screen-subtitle">下北沢で開催中・開催予定のイベント</div>
+      </div>
+      <div class="events-list" id="events-list"></div>
+    </div>
+
+    <!-- EVENT DETAIL -->
+    <div class="screen" id="event-detail">
+      <button class="detail-back" onclick="goBack()">‹</button>
+      <div id="detail-content"></div>
+    </div>
+
+    <!-- SPOT DETAIL -->
+    <div class="screen" id="spot-detail">
+      <button class="detail-back" onclick="goBack()">‹</button>
+      <div id="spot-detail-content"></div>
+    </div>
+
+    <!-- MAP -->
+    <div class="screen" id="map">
+      <div class="map-header">
+        <div class="map-title">マップ</div>
+        <div class="category-tabs" id="cat-tabs"></div>
+      </div>
+      <div id="gmap-div" style="height:320px;width:100%;position:relative;z-index:1;background:#e8f0e8;"></div>
+      <div class="map-info-card" id="map-info" style="position:relative;margin:0 12px;border-radius:var(--radius-md);box-shadow:var(--shadow-md);display:none"></div>
+      <div class="spots-list" id="spots-list"></div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="screen" id="news">
+      <div class="screen-header">
+        <div class="screen-title">ニュース</div>
+        <div class="screen-subtitle">下北沢の最新情報をお届け</div>
+      </div>
+      <div class="news-list" id="news-list"></div>
+    </div>
+
+    <!-- NEWS DETAIL -->
+    <div class="screen" id="news-detail">
+      <button class="detail-back" onclick="goBack()">‹</button>
+      <div id="news-detail-content"></div>
+    </div>
+
+    <!-- MYPAGE -->
+    <div class="screen" id="mypage">
+      <div class="mypage-hero">
+        <div class="avatar-circle">🌿</div>
+        <div class="profile-name">Koki Shimokita</div>
+        <div class="profile-bio">下北沢でコミュニティ共創スペース「coen」を運営。街と人をつなぐ活動をしています。</div>
+        <div class="profile-joined">2026年4月から参加</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num">8</div>
+          <div class="stat-label">参加イベント数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">3</div>
+          <div class="stat-label">主催イベント数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">42</div>
+          <div class="stat-label">つながった人</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">🌿</div>
+          <div class="stat-label" style="font-size:13px;">コミュニティビルダー</div>
+        </div>
+      </div>
+      <div class="menu-list">
+        <div class="menu-item">
+          <div class="menu-icon">🎟</div>
+          <div class="menu-label">参加済みイベント</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🔖</div>
+          <div class="menu-label">保存したイベント</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🏪</div>
+          <div class="menu-label">よく行くスポット</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🔔</div>
+          <div class="menu-label">通知設定</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">⚙️</div>
+          <div class="menu-label">アカウント設定</div>
+          <div class="menu-arrow">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="navigate('home')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">ホーム</span>
+    </button>
+    <button class="nav-item" id="nav-events" onclick="navigate('events')">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">イベント</span>
+    </button>
+    <button class="nav-item" id="nav-map" onclick="navigate('map')">
+      <span class="nav-icon">🗺</span>
+      <span class="nav-label">マップ</span>
+    </button>
+    <button class="nav-item" id="nav-news" onclick="navigate('news')">
+      <span class="nav-icon">📰</span>
+      <span class="nav-label">ニュース</span>
+    </button>
+    <button class="nav-item" id="nav-mypage" onclick="navigate('mypage')">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">マイページ</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/home.js"></script>
+<script src="js/events.js"></script>
+<script src="js/news.js"></script>
+<script src="js/map.js"></script>
+<script>
+  // ── INIT ──
+  renderHome();
+  renderEvents();
+  renderNews();
+  renderMap(); // タブだけ先に描画
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCCOEPGikU9tjmiewQ0Kimh3_gtIXvhrI0&callback=initMap" async defer></script>
+</body>
+</html>
