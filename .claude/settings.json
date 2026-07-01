@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chromium-cli --help)",
+      "Bash(where python *)",
+      "Bash(where node *)",
+      "Bash(where npx *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('playwright'\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(curl -sf http://localhost:8791/shimokita-app.html -o /dev/null)"
+    ]
+  }
+}

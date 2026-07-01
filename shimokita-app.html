@@ -464,7 +464,7 @@
   .join-btn-sm:active { opacity: 0.8; }
 
   /* ── EVENT DETAIL ── */
-  #event-detail {
+  #event-detail, #spot-detail {
     background: var(--bg);
   }
   .detail-back {
@@ -963,6 +963,12 @@
       <div id="detail-content"></div>
     </div>
 
+    <!-- SPOT DETAIL -->
+    <div class="screen" id="spot-detail">
+      <button class="detail-back" onclick="goBack()">‹</button>
+      <div id="spot-detail-content"></div>
+    </div>
+
     <!-- MAP -->
     <div class="screen" id="map">
       <div class="map-header">
@@ -1082,28 +1088,28 @@ const events = [
 ];
 
 const spots = [
-  // カフェ（実住所ベース）
-  { id:'c1', name:'fuzkue', cat:'カフェ', lat:35.6593, lng:139.6639, desc:'BONUS TRACK内。読書に集中できる静かなカフェ。会話禁止の独特ルール。', rating:'4.7', icon:'☕' },
-  { id:'c2', name:'BEAR POND ESPRESSO', cat:'カフェ', lat:35.6632, lng:139.6650, desc:'北沢2-36-12。絶品エスプレッソで有名な小さなカフェ。', rating:'4.6', icon:'☕' },
-  { id:'c3', name:'猿田彦珈琲 下北沢店', cat:'カフェ', lat:35.6624, lng:139.6671, desc:'北沢2丁目。こだわりの自家焙煎コーヒーが楽しめる人気店。', rating:'4.5', icon:'☕' },
-  { id:'c4', name:'COFFEE AMP', cat:'カフェ', lat:35.6635, lng:139.6648, desc:'音楽と珈琲を楽しめるハイブリッドカフェ。レコードが流れる空間。', rating:'4.3', icon:'☕' },
-  { id:'c5', name:'日記屋 月日', cat:'カフェ', lat:35.6596, lng:139.6643, desc:'BONUS TRACK内。本と日記に囲まれた、読書とコーヒーの店。', rating:'4.5', icon:'☕' },
-  // 古着（実住所ベース）
-  { id:'v1', name:'FLAMINGO 下北沢', cat:'古着', lat:35.6613, lng:139.6683, desc:'北沢2-25-12。アメリカ古着を1枚1枚セレクト。下北沢を代表するヴィンテージショップ。', rating:'4.5', icon:'👗' },
-  { id:'v2', name:'Chicago 下北沢', cat:'古着', lat:35.6589, lng:139.6676, desc:'北沢2-12。アメリカンヴィンテージ専門店。掘り出し物多数。', rating:'4.4', icon:'👗' },
-  { id:'v3', name:'BerBerJin', cat:'古着', lat:35.6630, lng:139.6689, desc:'北沢3丁目。デニム・ミリタリーに強い個性的なセレクト店。', rating:'4.6', icon:'👗' },
-  { id:'v4', name:'FLORIDA 下北沢', cat:'古着', lat:35.6619, lng:139.6692, desc:'北沢2-29-2。アメカジ・カラフルなヴィンテージが多数揃う。', rating:'4.3', icon:'👗' },
-  { id:'v5', name:'WEGO 下北沢', cat:'古着', lat:35.6626, lng:139.6676, desc:'北沢2丁目。トレンドとヴィンテージのミックス。入りやすい大型店。', rating:'4.2', icon:'👗' },
-  // サウナ・銭湯（下北沢エリア）
-  { id:'s1', name:'駒の湯', cat:'サウナ', lat:35.6551, lng:139.6638, desc:'代沢5丁目。地元民に長年愛される昔ながらの銭湯。', rating:'4.2', icon:'♨️' },
-  { id:'s2', name:'三日月湯', cat:'サウナ', lat:35.6600, lng:139.6720, desc:'北沢3丁目。下北沢エリアの銭湯。リーズナブルに整える。', rating:'4.1', icon:'♨️' },
-  { id:'s3', name:'池ノ上浴場', cat:'サウナ', lat:35.6655, lng:139.6695, desc:'池ノ上エリア。下北沢から徒歩圏内の小さな銭湯。', rating:'4.0', icon:'♨️' },
-  // ライブハウス（実住所ベース）
-  { id:'l1', name:'下北沢SHELTER', cat:'ライブハウス', lat:35.6615, lng:139.6694, desc:'北沢2-6-10。1991年創業、下北沢のシンボル的ライブハウス。キャパ250名。', rating:'4.7', icon:'🎸' },
-  { id:'l2', name:'下北沢THREE', cat:'ライブハウス', lat:35.6610, lng:139.6680, desc:'北沢2丁目。音響にこだわったライブスペース。', rating:'4.5', icon:'🎸' },
-  { id:'l3', name:'GARAGE', cat:'ライブハウス', lat:35.6617, lng:139.6668, desc:'北沢2丁目。地下の小さなライブハウス。密な熱量が魅力。', rating:'4.4', icon:'🎸' },
-  { id:'l4', name:'Half Moon Hall', cat:'ライブハウス', lat:35.6622, lng:139.6660, desc:'北沢2丁目。クラシック・ジャズに最適な音楽ホール。Yamaha C3設置。', rating:'4.6', icon:'🎸' },
-  { id:'l5', name:'CLUB251', cat:'ライブハウス', lat:35.6605, lng:139.6685, desc:'北沢2丁目。多彩なジャンルの公演が毎夜開催。', rating:'4.4', icon:'🎸' },
+  // カフェ（実店舗ベース／2026年7月時点）
+  { id:'c1', name:'fuzkue', cat:'カフェ', lat:35.6596, lng:139.6641, address:'東京都世田谷区代田2-36-14（BONUS TRACK内）', hours:'12:00〜22:00', desc:'私語厳禁の「本の読める店」。読書に没頭できる独特のルールを持つ、下北沢を代表する読書専門カフェ。', rating:'4.5', icon:'☕' },
+  { id:'c2', name:'BEAR POND ESPRESSO', cat:'カフェ', lat:35.6631, lng:139.6649, address:'東京都世田谷区北沢2-36-12 1F', hours:'平日・土 10:30〜18:00／日 11:00〜18:30（火休）', phone:'03-5454-2486', desc:'行列必至の名店。芸術的なラテアートと濃厚な自家製エスプレッソが評判の小さなカフェ。', rating:'4.6', icon:'☕' },
+  { id:'c3', name:'猿田彦珈琲 下北沢店', cat:'カフェ', lat:35.6613, lng:139.6678, address:'東京都世田谷区北沢2-24-5 SHIMOKITA FRONT 1F', hours:'平日 7:30〜22:30／休日 9:00〜22:30', phone:'03-6407-0085', desc:'駅前すぐの一号店。朝早くから開いており、19時以降はバーメニューも楽しめる。', rating:'4.3', icon:'☕' },
+  { id:'c4', name:'CITY COUNTRY CITY', cat:'カフェ', lat:35.6608, lng:139.6675, address:'東京都世田谷区北沢2-12-13 細沢ビル4F', hours:'12:00〜22:00（L.O.21:30、水休）', phone:'03-3410-6080', desc:'レコード店とカフェバーが融合した空間。サニーデイ・サービスの曽我部恵一氏がオーナーを務める。', rating:'4.4', icon:'☕' },
+  { id:'c5', name:'日記屋 月日', cat:'カフェ', lat:35.6595, lng:139.6640, address:'東京都世田谷区代田2-36-12（BONUS TRACK内）', hours:'8:00〜19:00（ドリンクL.O.18:45）', desc:'日記の専門店。新品・古本の日記本やリトルプレスを扱い、併設のコーヒースタンドで一息つける。', rating:'4.5', icon:'☕' },
+  // 古着（実店舗ベース／2026年7月時点）
+  { id:'v1', name:'FLAMINGO 下北沢店', cat:'古着', lat:35.6620, lng:139.6674, address:'東京都世田谷区北沢2-25-12 リサビル1F', hours:'平日 12:00〜21:00／土日祝 11:00〜21:00', desc:'40s〜80sのアメリカ古着を1枚1枚セレクト。バイヤーが常駐し商品の入れ替えも早い、下北沢を代表するヴィンテージショップ。', rating:'4.5', icon:'👗' },
+  { id:'v2', name:'原宿シカゴ 下北沢店', cat:'古着', lat:35.6598, lng:139.6659, address:'東京都世田谷区代沢5-32-5 シェルボ下北沢', hours:'11:00〜20:00（年中無休）', phone:'03-3419-2890', desc:'アメリカ・ヨーロッパ・日本の古着を幅広く扱う老舗。下北沢駅南西口から徒歩約4分。', rating:'4.4', icon:'👗' },
+  { id:'v3', name:'BerBerJin（Straight From LA）', cat:'古着', lat:35.6616, lng:139.6668, address:'東京都世田谷区北沢2-13-15 2F', hours:'12:00〜20:00', desc:'古着を量り売りする話題の店舗。デニム・ミリタリーに強い個性的なセレクトが魅力。', rating:'4.6', icon:'👗' },
+  { id:'v4', name:'FLORIDA 下北沢店', cat:'古着', lat:35.6622, lng:139.6681, address:'東京都世田谷区北沢2-29-2 フェニキアビルB1F', hours:'平日 12:00〜21:00／土日祝 11:00〜21:00', desc:'アメカジ・カラフルなヴィンテージが多数揃う。査定額をお米や店舗商品と交換できるユニークな買取システムも。', rating:'4.3', icon:'👗' },
+  { id:'v5', name:'WEGO VINTAGE 下北沢店', cat:'古着', lat:35.6621, lng:139.6682, address:'東京都世田谷区北沢2-29-3 オークプラザ1F', hours:'11:00〜21:00', phone:'03-5790-5525', desc:'トレンドとヴィンテージをミックス。入りやすい大型店で、幅広い世代に人気。', rating:'4.2', icon:'👗' },
+  // サウナ・銭湯（実店舗ベース／2026年7月時点）
+  { id:'s1', name:'石川湯', cat:'サウナ', lat:35.6636, lng:139.6690, address:'東京都世田谷区北沢3-12-8', hours:'15:30〜23:45（月休、祝日の場合は翌日）', phone:'03-3466-4305', desc:'赤レンガの玄関が目印。下北沢・東北沢・池ノ上のどの駅からも歩ける、地元で愛される老舗銭湯。', rating:'4.2', icon:'♨️' },
+  { id:'s2', name:'由縁別邸 代田', cat:'サウナ', lat:35.6588, lng:139.6634, address:'東京都世田谷区代田2-31-26', hours:'日帰り温泉 午前9:00〜／午後16:00〜22:00（最終入場21:30）', desc:'箱根から運ぶ温泉と、男湯ドライサウナ・女湯アロマミストサウナが自慢の温泉旅館。下北沢駅から徒歩8分。', rating:'4.5', icon:'♨️' },
+  { id:'s3', name:'サウナ&カプセル ミナミ下北沢店', cat:'サウナ', lat:35.6600, lng:139.6660, address:'東京都世田谷区代沢2-29-9', phone:'03-5481-3731', desc:'南口徒歩3分、100℃超の高温サウナが名物の老舗サウナ＆カプセルホテル。※2026年5月より改装のため休業中、再開時期は要確認。', rating:'4.0', icon:'♨️' },
+  // ライブハウス（実店舗ベース／2026年7月時点）
+  { id:'l1', name:'下北沢SHELTER', cat:'ライブハウス', lat:35.6620, lng:139.6669, address:'東京都世田谷区北沢2-6-10 仙田ビルB1F', phone:'03-3466-7430', desc:'1991年創業、下北沢のシンボル的ライブハウス。キャパ250名で、POPs・Rock・Punkなど幅広いジャンルの公演を開催。', rating:'4.7', icon:'🎸' },
+  { id:'l2', name:'下北沢THREE', cat:'ライブハウス', lat:35.6600, lng:139.6665, address:'東京都世田谷区代沢5-18-1 カラバッシュビルB1F', phone:'03-5486-8804', desc:'音響にこだわったキャパ170名のライブスペース。', rating:'4.5', icon:'🎸' },
+  { id:'l3', name:'近道 / おてまえ', cat:'ライブハウス', lat:35.6640, lng:139.6685, address:'東京都世田谷区北沢3-31-15', desc:'2023年、閉店した「下北沢GARAGE」の跡地にオープン。1階はアコースティックBAR「おてまえ」、地下はライブハウス「近道」。', rating:'4.3', icon:'🎸' },
+  { id:'l4', name:'Half Moon Hall', cat:'ライブハウス', lat:35.6650, lng:139.6700, address:'東京都世田谷区北沢4-10-4', desc:'Yamaha C3グランドピアノを設置。クラシック・ジャズに最適な、アットホームな音楽ホール。', rating:'4.6', icon:'🎸' },
+  { id:'l5', name:'CLUB251', cat:'ライブハウス', lat:35.6595, lng:139.6662, address:'東京都世田谷区代沢5-29-15 SYビルB1', phone:'03-5481-4141', desc:'多彩なジャンルの公演が毎夜開催される、代沢のライブハウス。', rating:'4.4', icon:'🎸' },
 ];
 
 const news = [
@@ -1159,7 +1165,7 @@ function showDetail(id) {
 }
 
 function goBack() {
-  navigate(prevScreen === 'event-detail' ? 'home' : prevScreen);
+  navigate(['event-detail', 'spot-detail'].includes(prevScreen) ? 'home' : prevScreen);
 }
 
 // ── RENDER HOME ──
@@ -1381,7 +1387,7 @@ function showSpotInfo(id) {
   const cfg = catConfig[activeCategory];
   const card = document.getElementById('map-info');
   card.style.display = 'block';
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${s.icon}</div><div style="flex:1;min-width:0"><div class="map-info-name">${s.name}</div><div class="map-info-desc">${s.desc}</div><div class="map-info-rating">★ ${s.rating}</div></div><div onclick="document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="showSpotDetail('${s.id}')"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${s.icon}</div><div style="flex:1;min-width:0"><div class="map-info-name">${s.name}</div><div class="map-info-desc">${s.desc}</div><div class="map-info-rating">★ ${s.rating}</div></div><div onclick="event.stopPropagation();document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
   if (gmap) gmap.panTo({ lat: s.lat, lng: s.lng });
 }
 
@@ -1391,11 +1397,59 @@ function renderSpotsList() {
   document.getElementById('spots-list').innerHTML = `
     <div style="padding:0 0 8px"><div class="section-title">${activeCategory} 一覧</div></div>
     ${filtered.map(s => `
-    <div class="spot-card" onclick="showSpotInfo('${s.id}')">
+    <div class="spot-card" onclick="showSpotDetail('${s.id}')">
       <div class="spot-icon" style="background:${cfg.bg}">${s.icon}</div>
       <div style="flex:1;min-width:0"><div class="spot-name">${s.name}</div><div class="spot-desc">${s.desc}</div><div class="spot-rating">★ ${s.rating}</div></div>
       <div style="color:var(--ink-soft);font-size:18px">›</div>
     </div>`).join('')}
+  `;
+}
+
+function showSpotDetail(id) {
+  const s = spots.find(sp => sp.id === id);
+  if (!s) return;
+  renderSpotDetail(s);
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.getElementById('spot-detail').classList.add('active');
+  document.getElementById('spot-detail').scrollTop = 0;
+  prevScreen = currentScreen;
+  currentScreen = 'spot-detail';
+}
+
+function renderSpotDetail(s) {
+  const cfg = catConfig[s.cat];
+  const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address);
+  document.getElementById('spot-detail-content').innerHTML = `
+    <div class="detail-banner" style="background:${cfg.bg}">
+      <div class="detail-banner-emoji">${s.icon}</div>
+    </div>
+    <div class="detail-body">
+      <div class="detail-category"><span class="pill" style="background:${cfg.bg};color:${cfg.color}">${s.cat}</span></div>
+      <div class="detail-title">${s.name}</div>
+      <div class="detail-info-row">
+        <div class="detail-info-icon">📍</div>
+        <div><div class="detail-info-label">住所</div><div class="detail-info-value">${s.address}</div></div>
+      </div>
+      ${s.hours ? `<div class="detail-info-row">
+        <div class="detail-info-icon">🕒</div>
+        <div><div class="detail-info-label">営業時間</div><div class="detail-info-value">${s.hours}</div></div>
+      </div>` : ''}
+      ${s.phone ? `<div class="detail-info-row">
+        <div class="detail-info-icon">📞</div>
+        <div><div class="detail-info-label">電話番号</div><div class="detail-info-value">${s.phone}</div></div>
+      </div>` : ''}
+      <div class="detail-info-row">
+        <div class="detail-info-icon">★</div>
+        <div><div class="detail-info-label">評価</div><div class="detail-info-value">${s.rating}</div></div>
+      </div>
+      <a class="detail-map-placeholder" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">
+        <div class="detail-map-icon">🗺</div>
+        <div class="detail-map-text">Google マップで開く</div>
+        <div style="font-size:11px;color:var(--forest);opacity:0.7">${s.address}</div>
+      </a>
+      <div class="detail-desc-label">お店について</div>
+      <div class="detail-desc">${s.desc}</div>
+    </div>
   `;
 }
 
