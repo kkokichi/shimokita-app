@@ -261,6 +261,7 @@ auth.onAuthStateChanged(user => {
   currentUser = user;
   if (typeof initCirclesListener === 'function') initCirclesListener();
   if (typeof initMypageListsListener === 'function') initMypageListsListener();
+  if (typeof initFriendsListener === 'function') initFriendsListener();
   if (!user) {
     userProfile = null;
     joinedEvents.clear();

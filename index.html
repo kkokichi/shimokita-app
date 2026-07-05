@@ -263,6 +263,7 @@
         <input class="auth-input" type="text" id="profile-hobby" required placeholder="例：カフェ巡り、古着、音楽">
         <label class="auth-label">自己紹介（任意）</label>
         <textarea class="auth-input" id="profile-bio" rows="3" placeholder="下北沢での過ごし方など"></textarea>
+        <div class="profile-view-label" style="margin-top:6px">この内容は他のユーザーにも表示されます。個人が特定される情報や連絡先は入力しないでください。</div>
         <div class="auth-error" id="profile-error"></div>
         <button class="btn-primary auth-submit" type="submit">登録して始める</button>
       </form>
@@ -303,6 +304,11 @@
         <div class="met-person-list" id="mypage-circles-list"></div>
       </div>
       <div class="menu-list">
+        <div class="menu-item" onclick="openFriendsScreen()">
+          <div class="menu-icon">👥</div>
+          <div class="menu-label">フレンド</div>
+          <div class="menu-arrow">›</div>
+        </div>
         <div class="menu-item" onclick="openJoinedEventsScreen()">
           <div class="menu-icon">🎟</div>
           <div class="menu-label">参加済みイベント</div>
@@ -339,6 +345,51 @@
           <div class="menu-arrow">›</div>
         </div>
       </div>
+    </div>
+
+    <!-- FRIENDS -->
+    <div class="screen" id="friends">
+      <button class="detail-back" onclick="goBack()">‹</button>
+      <div class="screen-header" style="padding-left:64px">
+        <div class="screen-title">フレンド</div>
+      </div>
+      <div style="padding:16px 16px 0">
+        <div class="section-title">フレンド一覧</div>
+        <div id="friends-list"></div>
+      </div>
+      <div style="padding:0 16px 16px">
+        <div class="section-title">申請中</div>
+        <div id="friends-received-list"></div>
+        <div id="friends-sent-list"></div>
+      </div>
+      <div style="padding:0 16px 16px">
+        <div class="section-title">おすすめのつながり</div>
+        <div id="friends-recommend-list"></div>
+      </div>
+      <div style="padding:0 16px 16px">
+        <div class="section-title">検索</div>
+        <input class="auth-input" id="friends-search-input" placeholder="名前で検索" oninput="handleFriendsSearchInput(this.value)">
+        <div id="friends-search-results" style="margin-top:10px"></div>
+      </div>
+      <div style="padding:0 16px 16px">
+        <div class="section-title">ブロック中</div>
+        <div id="friends-blocked-list"></div>
+      </div>
+    </div>
+
+    <!-- CHAT THREAD (1:1) -->
+    <div class="screen" id="chat-thread">
+      <div class="chat-thread-header">
+        <button class="detail-back" style="position:static" onclick="closeChatThread();goBack()">‹</button>
+        <div class="chat-thread-name" id="chat-thread-name"></div>
+        <button type="button" class="chat-block-btn" onclick="blockChatPartner()">🚫</button>
+      </div>
+      <div class="chat-message-list" id="chat-message-list"></div>
+      <form class="chat-input-bar" id="chat-message-form" onsubmit="sendChatMessage(event)">
+        <input class="auth-input" id="chat-message-text" maxlength="500" placeholder="メッセージを入力">
+        <button class="btn-primary" type="submit" id="chat-message-submit-btn">送信</button>
+      </form>
+      <div class="auth-error" id="chat-message-error" style="padding:0 16px"></div>
     </div>
 
     <!-- JOINED EVENTS -->
@@ -408,6 +459,7 @@
         <input class="auth-input" type="text" id="account-hobby" required>
         <label class="auth-label">自己紹介（任意）</label>
         <textarea class="auth-input" id="account-bio" rows="3"></textarea>
+        <div class="profile-view-label" style="margin-top:6px">この内容は他のユーザーにも表示されます。個人が特定される情報や連絡先は入力しないでください。</div>
         <div class="auth-error" id="account-profile-error"></div>
         <button class="btn-primary auth-submit" type="submit">プロフィールを更新</button>
       </form>
@@ -451,6 +503,10 @@
     <button class="nav-item" id="nav-circles" onclick="openCirclesScreen()">
       <span class="nav-icon">🌱</span>
       <span class="nav-label">サークル</span>
+    </button>
+    <button class="nav-item" id="nav-friends" onclick="openFriendsScreen()">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">フレンド</span>
     </button>
     <button class="nav-item" id="nav-news" onclick="navigate('news')">
       <span class="nav-icon">📰</span>
@@ -556,6 +612,8 @@
 <script src="js/timeline.js"></script>
 <script src="js/organizer.js"></script>
 <script src="js/presence.js"></script>
+<script src="js/friends.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/circles.js"></script>
 <script src="js/mypage.js"></script>
 <script src="js/eventCreate.js"></script>

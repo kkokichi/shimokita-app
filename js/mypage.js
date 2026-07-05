@@ -168,7 +168,7 @@ function renderFavoriteSpotsList() {
       <div style="flex:1;min-width:0">
         <div class="spot-name">${escapeHtml(s.name)}</div>
         <div class="spot-desc">${escapeHtml(s.desc)}</div>
-        <div class="spot-rating">★ ${s.rating}</div>
+        ${s.rating ? `<div class="spot-rating">★ ${s.rating}</div>` : ''}
       </div>
       <button class="icon-toggle-btn active" onclick="event.stopPropagation();toggleFavoriteSpot('${s.id}', this)">♡</button>
     </div>`).join('');

@@ -73,15 +73,17 @@ async function renderOrganizerReports() {
       listEl.innerHTML = '<div class="timeline-empty">保留中の通報はありません。</div>';
       return;
     }
+    const sourceLabels = { post: 'タイムライン投稿', circleMessage: 'サークルチャット', chatMessage: '個人チャット' };
     listEl.innerHTML = snapshot.docs.map(doc => {
       const r = doc.data();
       const targetId = r.targetId || r.postId; // 旧データ（postIdのみ）との互換
       const targetType = r.targetType || 'post';
-      const sourceLabel = targetType === 'circleMessage' ? 'サークル掲示板' : 'タイムライン投稿';
+      const sourceLabel = sourceLabels[targetType] || 'タイムライン投稿';
       return `
       <div class="organizer-card">
         <div class="organizer-card-title" style="font-size:12px">${sourceLabel}</div>
         <div class="organizer-card-sub">理由：${escapeHtml(r.reason || '未記入')}</div>
+        ${r.contentSnapshot ? `<div class="organizer-card-sub">内容：${escapeHtml(r.contentSnapshot)}</div>` : ''}
         <button class="organizer-delete-btn" onclick="handleReportDelete('${doc.id}','${targetId}','${targetType}', this)">投稿を削除する</button>
       </div>`;
     }).join('');
@@ -91,10 +93,12 @@ async function renderOrganizerReports() {
   }
 }
 
+const REPORT_TARGET_COLLECTIONS = { post: 'posts', circleMessage: 'circleMessages', chatMessage: 'chatMessages' };
+
 async function handleReportDelete(reportId, targetId, targetType, btn) {
   btn.disabled = true;
   try {
-    const collection = targetType === 'circleMessage' ? 'circleMessages' : 'posts';
+    const collection = REPORT_TARGET_COLLECTIONS[targetType] || 'posts';
     await db.collection(collection).doc(targetId).delete();
     await db.collection('reports').doc(reportId).update({ status: 'reviewed' });
     showToast('投稿を削除しました');

@@ -190,7 +190,7 @@ function renderCircleDetail(c) {
         ${joined ? '✓ メンバーです（タップで脱退）' : '🌿 このサークルに参加する'}
       </button>
       <div class="map-mode-toggle" style="margin-top:24px">
-        <button class="map-mode-btn ${circleDetailTab === 'board' ? 'active' : ''}" onclick="switchCircleDetailTab('${c.id}','board')">掲示板</button>
+        <button class="map-mode-btn ${circleDetailTab === 'board' ? 'active' : ''}" onclick="switchCircleDetailTab('${c.id}','board')">チャット</button>
         <button class="map-mode-btn ${circleDetailTab === 'events' ? 'active' : ''}" onclick="switchCircleDetailTab('${c.id}','events')">イベント</button>
       </div>
       <div id="circle-tab-content" style="margin-top:16px"></div>
@@ -208,11 +208,11 @@ function switchCircleDetailTab(circleId, tab) {
 function renderCircleTabContent(circleId) {
   const el = document.getElementById('circle-tab-content');
   if (!el) return;
+  clearCircleChatListener();
   if (circleDetailTab === 'events') {
     renderCircleEventsList(circleId, el);
   } else {
-    el.innerHTML = '<div id="circle-board"></div>';
-    renderCircleBoard(circleId);
+    renderCircleChat(circleId);
   }
 }
 
@@ -266,57 +266,64 @@ async function renderMyPageCircles() {
   }).join('');
 }
 
-// ── 掲示板（サークルメッセージ） ──
-async function renderCircleBoard(circleId) {
-  const boardEl = document.getElementById('circle-board');
-  if (!boardEl) return;
+// ── チャット（サークルグループチャット） ──
+let circleChatUnsubscribe = null;
+let currentCircleMessagesCache = [];
+
+function clearCircleChatListener() {
+  if (circleChatUnsubscribe) {
+    circleChatUnsubscribe();
+    circleChatUnsubscribe = null;
+  }
+}
+
+function renderCircleChat(circleId) {
+  const el = document.getElementById('circle-tab-content');
+  if (!el) return;
   if (!isCircleMember(circleId)) {
-    boardEl.innerHTML = '<div class="timeline-empty">参加してから見られます。</div>';
+    el.innerHTML = '<div class="timeline-empty">参加してから見られます。</div>';
     return;
   }
-  boardEl.innerHTML = `
-    <form class="timeline-post-form" style="padding:0 0 8px" onsubmit="handleCircleMessagePost(event, '${circleId}')">
-      <textarea class="auth-input" id="circle-message-text" rows="2" maxlength="200" placeholder="サークルメンバーにひとこと"></textarea>
-      <div class="auth-error" id="circle-message-error"></div>
-      <button class="btn-primary auth-submit" type="submit" id="circle-message-submit-btn">投稿する</button>
+  el.innerHTML = `
+    <div class="chat-message-list" id="circle-chat-list"><div class="timeline-empty">読み込み中...</div></div>
+    <form class="chat-input-bar" id="circle-chat-form" onsubmit="handleCircleMessagePost(event, '${circleId}')">
+      <input class="auth-input" id="circle-message-text" maxlength="200" placeholder="サークルメンバーにひとこと">
+      <button class="btn-primary" type="submit" id="circle-message-submit-btn">送信</button>
     </form>
-    <div class="timeline-list" id="circle-message-list" style="padding:0"><div class="timeline-empty">読み込み中...</div></div>
+    <div class="auth-error" id="circle-message-error" style="padding:0 16px"></div>
   `;
-  try {
-    const snapshot = await db.collection('circleMessages')
-      .where('circleId', '==', circleId)
-      .get();
-    const listEl = document.getElementById('circle-message-list');
-    if (snapshot.empty) {
-      listEl.innerHTML = '<div class="timeline-empty">まだ投稿がありません。最初の投稿をしてみましょう！</div>';
-      return;
-    }
-    // circleId単一条件のみでクエリし、createdAtでの並び替えはクライアント側で行う
-    // （circleId+createdAtの複合インデックスを不要にするため）
-    const docs = snapshot.docs.slice().sort((a, b) => {
-      const at = a.data().createdAt, bt = b.data().createdAt;
-      if (!at || !bt) return 0;
-      return at.toMillis() - bt.toMillis();
+  // circleId単一条件のみでクエリし、createdAtでの並び替えはクライアント側で行う
+  // （circleId+createdAtの複合インデックスを不要にするため）
+  circleChatUnsubscribe = db.collection('circleMessages')
+    .where('circleId', '==', circleId)
+    .onSnapshot(snapshot => {
+      renderCircleChatMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() })), circleId);
+    }, err => {
+      console.error('circle chat listener error:', err.code, err.message);
+      const listEl = document.getElementById('circle-chat-list');
+      if (listEl) listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。</div>';
     });
-    listEl.innerHTML = docs.map(doc => {
-      const m = doc.data();
-      return `
-      <div class="timeline-card">
-        <div class="timeline-card-meta">
-          <span class="timeline-card-name">${escapeHtml(m.userName || '名無しさん')}</span>
-          <span class="timeline-card-date">${formatPostDate(m.createdAt)}</span>
-        </div>
-        <div class="timeline-card-content">${escapeHtml(m.content)}</div>
-        <div class="timeline-card-actions">
-          <button class="timeline-report-btn" onclick="handleCircleMessageReport('${doc.id}','${circleId}')">🚩 通報</button>
-        </div>
-      </div>`;
-    }).join('');
-  } catch (err) {
-    console.error('circle board fetch error:', err.code, err.message);
-    const listEl = document.getElementById('circle-message-list');
-    if (listEl) listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。</div>';
+}
+
+function renderCircleChatMessages(messages, circleId) {
+  currentCircleMessagesCache = messages;
+  const listEl = document.getElementById('circle-chat-list');
+  if (!listEl) return;
+  if (messages.length === 0) {
+    listEl.innerHTML = '<div class="timeline-empty">まだ投稿がありません。最初の投稿をしてみましょう！</div>';
+    return;
   }
+  const sorted = messages.slice().sort((a, b) => {
+    const at = a.createdAt, bt = b.createdAt;
+    if (!at || !bt) return 0;
+    return at.toMillis() - bt.toMillis();
+  });
+  listEl.innerHTML = sorted.map(m => renderChatBubbleHtml(m, m.userId === currentUser.uid, {
+    senderName: m.userName || '名無しさん',
+    reportButtonHtml: `<button class="timeline-report-btn" onclick="handleCircleMessageReport('${m.id}','${circleId}')">🚩</button>`,
+  })).join('');
+  const detailEl = document.getElementById('circle-detail');
+  if (detailEl) detailEl.scrollTop = detailEl.scrollHeight;
 }
 
 async function handleCircleMessagePost(e, circleId) {
@@ -347,8 +354,7 @@ async function handleCircleMessagePost(e, circleId) {
       content: text,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    showToast('投稿しました！');
-    renderCircleBoard(circleId);
+    textarea.value = '';
   } catch (err) {
     console.error('circle message post error:', err.code, err.message);
     errEl.textContent = '投稿に失敗しました。もう一度お試しください。';
@@ -364,12 +370,14 @@ async function handleCircleMessageReport(messageId, circleId) {
   }
   const reason = prompt('通報理由を入力してください（任意）', '');
   if (reason === null) return;
+  const msg = currentCircleMessagesCache.find(m => m.id === messageId);
   try {
     await db.collection('reports').add({
       targetType: 'circleMessage',
       targetId: messageId,
       reporterId: currentUser.uid,
       reason: reason || '理由未記入',
+      contentSnapshot: msg ? msg.content : null,
       status: 'pending',
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });

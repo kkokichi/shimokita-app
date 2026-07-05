@@ -432,6 +432,9 @@ async function openProfileViewModal(uid, checkedInAt) {
       sheet.innerHTML = '<div class="timeline-empty">プロフィールが見つかりません。</div>';
       return;
     }
+    const rel = typeof getRelationshipState === 'function'
+      ? await getRelationshipState(uid)
+      : { state: 'self' };
     sheet.innerHTML = `
       <div class="modal-header">
         <div class="modal-title">${escapeHtml(u.name || '不明なユーザー')}</div>
@@ -442,6 +445,7 @@ async function openProfileViewModal(uid, checkedInAt) {
         <div class="profile-view-row"><span class="profile-view-label">趣味</span><span>${escapeHtml(u.hobby || '未設定')}</span></div>
         <div class="profile-view-row"><span class="profile-view-label">自己紹介</span><span>${escapeHtml(u.bio || '未設定')}</span></div>
       </div>
+      ${typeof renderRelationshipActionHtml === 'function' ? renderRelationshipActionHtml(uid, rel) : ''}
     `;
   } catch (err) {
     console.error('profile view error:', err.code, err.message);

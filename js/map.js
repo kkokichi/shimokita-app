@@ -113,7 +113,7 @@ function showSpotInfo(id) {
   const cfg = catConfig[activeCategory];
   const card = document.getElementById('map-info');
   card.style.display = 'block';
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="showSpotDetail('${s.id}')"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${s.icon}</div><div style="flex:1;min-width:0"><div class="map-info-name">${s.name}</div><div class="map-info-desc">${s.desc}</div><div class="map-info-rating">★ ${s.rating}</div></div><div onclick="event.stopPropagation();document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="showSpotDetail('${s.id}')"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${s.icon}</div><div style="flex:1;min-width:0"><div class="map-info-name">${s.name}</div><div class="map-info-desc">${s.desc}</div>${s.rating ? `<div class="map-info-rating">★ ${s.rating}</div>` : ''}</div><div onclick="event.stopPropagation();document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
   if (gmap) gmap.panTo({ lat: s.lat, lng: s.lng });
 }
 
@@ -125,7 +125,7 @@ function renderSpotsList() {
     ${filtered.map(s => `
     <div class="spot-card" onclick="showSpotDetail('${s.id}')">
       <div class="spot-icon" style="background:${cfg.bg}">${s.icon}</div>
-      <div style="flex:1;min-width:0"><div class="spot-name">${s.name}</div><div class="spot-desc">${s.desc}</div><div class="spot-rating">★ ${s.rating}</div></div>
+      <div style="flex:1;min-width:0"><div class="spot-name">${s.name}</div><div class="spot-desc">${s.desc}</div>${s.rating ? `<div class="spot-rating">★ ${s.rating}</div>` : ''}</div>
       <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" onclick="event.stopPropagation();toggleFavoriteSpot('${s.id}', this)">♡</button>
     </div>`).join('')}
   `;
@@ -167,10 +167,10 @@ function renderSpotDetail(s) {
         <div class="detail-info-icon">📞</div>
         <div><div class="detail-info-label">電話番号</div><div class="detail-info-value">${s.phone}</div></div>
       </div>` : ''}
-      <div class="detail-info-row">
+      ${s.rating ? `<div class="detail-info-row">
         <div class="detail-info-icon">★</div>
         <div><div class="detail-info-label">評価</div><div class="detail-info-value">${s.rating}</div></div>
-      </div>
+      </div>` : ''}
       <a class="detail-map-placeholder" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">
         <div class="detail-map-icon">🗺</div>
         <div class="detail-map-text">Google マップで開く</div>

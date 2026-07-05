@@ -21,6 +21,26 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/events/$(eventId)).data.get('circleId', null);
     }
 
+    // 個人チャット共通ヘルパー
+    function sortedPairId(a, b) {
+      return a < b ? a + '_' + b : b + '_' + a;
+    }
+    function threadParticipants(threadId) {
+      return get(/databases/$(database)/documents/chatThreads/$(threadId)).data.participantIds;
+    }
+    // どちらの向きのブロックも存在しないこと（ブロックされたら双方から無効化）
+    function notBlockedPair(ids) {
+      return !exists(/databases/$(database)/documents/blocks/$(ids[0] + '_' + ids[1])) &&
+        !exists(/databases/$(database)/documents/blocks/$(ids[1] + '_' + ids[0]));
+    }
+    // sourceRequestIdが指すfriendRequestsが、指定した2者間でstatus=='accepted'であることを検証
+    // （friendRequestsはautoIdのためクエリでは検証できず、クライアントが渡したIDの中身を確認する）
+    function isAcceptedRequestFor(requestId, uidA, uidB) {
+      let r = get(/databases/$(database)/documents/friendRequests/$(requestId)).data;
+      return r.status == 'accepted' &&
+        ((r.fromUserId == uidA && r.toUserId == uidB) || (r.fromUserId == uidB && r.toUserId == uidA));
+    }
+
     // users: 誰でも閲覧可、本人のみ作成・更新可
     match /users/{userId} {
       allow read: if true;
@@ -94,7 +114,7 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.userId);
     }
 
-    // circleMessages（サークル掲示板）: サークルメンバーのみ閲覧・投稿可
+    // circleMessages（サークルチャット）: サークルメンバーのみ閲覧・投稿可
     match /circleMessages/{messageId} {
       allow read: if isSignedIn() &&
         exists(/databases/$(database)/documents/circleMembers/$(resource.data.circleId + '_' + request.auth.uid));
@@ -102,7 +122,92 @@ service cloud.firestore {
         request.resource.data.userId == request.auth.uid &&
         exists(/databases/$(database)/documents/circleMembers/$(request.resource.data.circleId + '_' + request.auth.uid));
       allow update: if isOwner(resource.data.userId);
-      allow delete: if isOwner(resource.data.userId);
+      // 本人に加えorganizerも削除可（通報対応。以前はownerのみで、organizerが
+      // 通報された投稿を削除しようとすると常に失敗するバグがあったため修正）
+      allow delete: if isOwner(resource.data.userId) || isOrganizer();
+    }
+
+    // friendRequests: 本人（送信者/受信者）のみ読み書き可。相互承認制のため
+    // 更新（承認・拒否）は受信者のみ、pending→accepted/declinedにしか変更できない
+    match /friendRequests/{requestId} {
+      allow read: if isSignedIn() &&
+        (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        request.resource.data.fromUserId != request.resource.data.toUserId &&
+        request.resource.data.status == 'pending' &&
+        notBlockedPair([request.resource.data.fromUserId, request.resource.data.toUserId]);
+      allow update: if isSignedIn() &&
+        resource.data.toUserId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status in ['accepted', 'declined'] &&
+        request.resource.data.fromUserId == resource.data.fromUserId &&
+        request.resource.data.toUserId == resource.data.toUserId;
+      allow delete: if isOwner(resource.data.fromUserId);
+    }
+
+    // friends: 該当2者のみ読み取り・削除可。作成は「承認済みのfriendRequestsが
+    // 実在すること」をルール側で検証し、相互承認なしに直接作成することを防ぐ。
+    // 存在しないドキュメントのget()は resource == null になり、resource.dataへの
+    // アクセスがエラー（=拒否）になるため、まず resource == null を許可する
+    // （「関係が存在しない」という結果を安全に返せるようにするための対応。
+    // これが無いと、まだ何の関係も無い2人のプロフィール閲覧が軒並み失敗する）
+    match /friends/{pairId} {
+      allow read: if isSignedIn() && (resource == null || request.auth.uid in resource.data.userIds);
+      allow create: if isSignedIn() &&
+        request.auth.uid in request.resource.data.userIds &&
+        request.resource.data.userIds.size() == 2 &&
+        pairId == sortedPairId(request.resource.data.userIds[0], request.resource.data.userIds[1]) &&
+        isAcceptedRequestFor(request.resource.data.sourceRequestId, request.resource.data.userIds[0], request.resource.data.userIds[1]);
+      allow update: if false;
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.userIds;
+    }
+
+    // blocks: 本人（blocker）のみ作成・削除可。両者が読み取り可（自分がブロックされて
+    // いるかもクライアントが把握できるようにするため。ブロックした事実自体は非公開情報ではない）。
+    // friendsと同様、resource == null（未存在）を先に許可する
+    match /blocks/{blockId} {
+      allow read: if isSignedIn() &&
+        (resource == null || resource.data.blockerUserId == request.auth.uid || resource.data.blockedUserId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        request.resource.data.blockerUserId == request.auth.uid &&
+        request.resource.data.blockedUserId != request.auth.uid &&
+        blockId == request.resource.data.blockerUserId + '_' + request.resource.data.blockedUserId;
+      allow update: if false;
+      allow delete: if isOwner(resource.data.blockerUserId);
+    }
+
+    // chatThreads: 参加者本人のみ、かつブロック関係が無いことが条件
+    // （ブロックすると双方から読み取り不可になり「無効化」される）
+    match /chatThreads/{pairId} {
+      allow read: if isSignedIn() && resource != null &&
+        request.auth.uid in resource.data.participantIds &&
+        notBlockedPair(resource.data.participantIds);
+      allow create: if isSignedIn() &&
+        request.auth.uid in request.resource.data.participantIds &&
+        request.resource.data.participantIds.size() == 2 &&
+        pairId == sortedPairId(request.resource.data.participantIds[0], request.resource.data.participantIds[1]) &&
+        exists(/databases/$(database)/documents/friends/$(pairId)) &&
+        notBlockedPair(request.resource.data.participantIds);
+      allow update: if isSignedIn() &&
+        request.auth.uid in resource.data.participantIds &&
+        notBlockedPair(resource.data.participantIds);
+      allow delete: if false;
+    }
+
+    // chatMessages: スレッド参加者のみ、かつブロック関係が無いことが条件
+    match /chatMessages/{messageId} {
+      allow read: if isSignedIn() &&
+        request.auth.uid in threadParticipants(resource.data.threadId) &&
+        notBlockedPair(threadParticipants(resource.data.threadId));
+      allow create: if isSignedIn() &&
+        request.resource.data.senderId == request.auth.uid &&
+        request.auth.uid in threadParticipants(request.resource.data.threadId) &&
+        notBlockedPair(threadParticipants(request.resource.data.threadId));
+      allow update: if false;
+      // 本人に加えorganizerも削除可（通報対応。organizerはreportsのcontentSnapshotで
+      // 内容を確認するため、chatMessages自体への読み取り権限は付与しない設計）
+      allow delete: if isOwner(resource.data.senderId) || isOrganizer();
     }
 
     // savedEvents（マイページ「保存したイベント」）: 誰でも閲覧可、本人のみ作成・削除可
