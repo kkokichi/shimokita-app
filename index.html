@@ -200,12 +200,22 @@
         <div class="screen-title">タイムライン</div>
         <div class="screen-subtitle">参加報告やみんなの投稿</div>
       </div>
-      <form class="timeline-post-form" id="timeline-post-form" onsubmit="handleTimelinePost(event)">
-        <textarea class="auth-input" id="timeline-post-text" rows="2" maxlength="280" placeholder="いま下北沢で感じていることをシェアしよう"></textarea>
-        <div class="auth-error" id="timeline-post-error"></div>
-        <button class="btn-primary auth-submit" type="submit" id="timeline-post-btn">投稿する</button>
-      </form>
       <div class="timeline-list" id="timeline-list"></div>
+      <button class="timeline-fab" onclick="openTimelineComposeModal()">＋</button>
+    </div>
+
+    <div class="modal-overlay" id="timeline-compose-overlay" style="display:none" onclick="if(event.target===this) closeTimelineComposeModal()">
+      <div class="modal-sheet">
+        <div class="modal-header">
+          <div class="modal-title">投稿する</div>
+          <button class="modal-close" onclick="closeTimelineComposeModal()">×</button>
+        </div>
+        <form class="timeline-post-form" id="timeline-post-form" onsubmit="handleTimelinePost(event)">
+          <textarea class="auth-input" id="timeline-post-text" rows="4" maxlength="280" placeholder="いま下北沢で感じていることをシェアしよう"></textarea>
+          <div class="auth-error" id="timeline-post-error"></div>
+          <button class="btn-primary auth-submit" type="submit" id="timeline-post-btn">投稿する</button>
+        </form>
+      </div>
     </div>
 
     <!-- AUTH -->

@@ -74,12 +74,67 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.userId);
     }
 
-    // posts（タイムライン）: 誰でも閲覧可、本人のみ作成・編集・削除可
+    // posts（タイムライン）: 誰でも閲覧可、本人のみ作成・削除可。
+    // updateは「投稿者本人の編集」に加え、「いいね/リツイートの件数を、対応する
+    // postLikes/retweetsマーカー文書の作成・削除と同時にのみ」変更することを許可する
+    // （existsAfter()で「このリクエストが確定した後の状態」を見て、勝手なカウント
+    // 書き換えを防ぐ。件数以外のフィールドは変更不可＝affectedKeys().hasOnly(...)で保証）
     match /posts/{postId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.likesCount == 0 &&
+        request.resource.data.retweetCount == 0 &&
+        (
+          (request.resource.data.type in ['free', 'auto_join'] &&
+            request.resource.data.originalPostId == null &&
+            (request.resource.data.parentPostId == null ||
+              exists(/databases/$(database)/documents/posts/$(request.resource.data.parentPostId))))
+          ||
+          (request.resource.data.type == 'retweet' &&
+            request.resource.data.parentPostId == null &&
+            request.resource.data.content == '' &&
+            exists(/databases/$(database)/documents/posts/$(request.resource.data.originalPostId)) &&
+            existsAfter(/databases/$(database)/documents/retweets/$(request.resource.data.originalPostId + '_' + request.auth.uid)))
+        );
+      allow update: if isOwner(resource.data.userId) ||
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']) &&
+          (
+            (request.resource.data.likesCount == resource.data.get('likesCount', 0) + 1 &&
+              existsAfter(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)) &&
+              !exists(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)))
+            ||
+            (request.resource.data.likesCount == resource.data.get('likesCount', 0) - 1 &&
+              !existsAfter(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)) &&
+              exists(/databases/$(database)/documents/postLikes/$(postId + '_' + request.auth.uid)))
+          )) ||
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['retweetCount']) &&
+          request.resource.data.retweetCount == resource.data.get('retweetCount', 0) + 1 &&
+          existsAfter(/databases/$(database)/documents/retweets/$(postId + '_' + request.auth.uid)) &&
+          !exists(/databases/$(database)/documents/retweets/$(postId + '_' + request.auth.uid)));
       allow delete: if isOwner(resource.data.userId) || isOrganizer();
+    }
+
+    // postLikes: 本人のみ作成・削除可（ドキュメントIDは postId_userId 形式で固定、二重いいね防止）
+    match /postLikes/{likeId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        likeId == request.resource.data.postId + '_' + request.auth.uid;
+      allow update: if false;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // retweets: リツイート済みマーカー（ドキュメントIDは postId_userId 形式で固定、二重RT防止）。
+    // 取り消しは今回スコープ外のため削除不可
+    match /retweets/{rtId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        rtId == request.resource.data.postId + '_' + request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
     }
 
     // reports（通報）: 本人が作成可、organizerロールのみ閲覧可

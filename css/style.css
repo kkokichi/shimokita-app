@@ -850,6 +850,72 @@ body {
 .timeline-report-btn:active { opacity: 0.6; }
 .timeline-empty { text-align: center; font-size: 13px; color: var(--ink-soft); padding: 40px 20px; }
 
+.timeline-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--forest);
+  color: #fff;
+  font-size: 26px;
+  line-height: 52px;
+  text-align: center;
+  box-shadow: var(--shadow-md, var(--shadow-sm));
+  cursor: pointer;
+  z-index: 40;
+}
+.timeline-fab:active { opacity: 0.85; }
+
+.timeline-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.timeline-card-avatar { width: 32px; height: 32px; font-size: 16px; flex-shrink: 0; }
+.timeline-card-header .timeline-card-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.timeline-card-header .timeline-card-name { font-size: 13px; }
+.timeline-card-header .timeline-card-date { font-size: 11px; }
+
+.timeline-action-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.timeline-action-btn {
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 4px 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.timeline-action-btn:active { opacity: 0.6; }
+.timeline-action-btn.liked { color: var(--terra-dark); font-weight: 700; }
+
+.timeline-reply-form { margin-top: 10px; display: flex; flex-direction: column; }
+.timeline-reply-form .auth-submit { margin-top: 8px; }
+
+.timeline-retweet-label { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; font-weight: 700; }
+.timeline-embedded-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+.timeline-embedded-deleted { text-align: center; color: var(--ink-soft); font-size: 13px; padding: 16px; }
+
+.timeline-reply-thread {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline-reply-card { margin-bottom: 0; }
+
 /* ── ORGANIZER DASHBOARD ── */
 .organizer-section { margin-bottom: 8px; }
 .organizer-card {
