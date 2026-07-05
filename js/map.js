@@ -28,6 +28,7 @@ function initMap() {
   if (currentScreen === 'map') {
     setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 50);
   }
+  if (typeof initHomeMiniMap === 'function') initHomeMiniMap();
 }
 
 function renderMap() {

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>shimokita — 下北沢コミュニティ</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="js/theme.js"></script>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1C3A2F">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -13,6 +14,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 </head>
 <body>
 <div id="root">
@@ -34,6 +36,20 @@
 
       <div class="presence-cta">
         <button class="presence-checkin-btn" id="presence-checkin-btn" onclick="handlePresenceButtonClick()">📍 下北沢にチェックイン</button>
+      </div>
+
+      <div class="home-minimap-card" id="home-minimap-card" onclick="openHomeMiniMapFullView()">
+        <div class="home-minimap-header">
+          <span class="home-minimap-title">📍 みんな何してる？</span>
+          <span class="home-minimap-badge" id="home-minimap-badge" style="display:none">今、<span class="count-num" id="home-minimap-count">0</span>人が下北沢にいます</span>
+        </div>
+        <div class="home-minimap-surface">
+          <div id="home-minimap-div"></div>
+          <div class="home-minimap-empty" id="home-minimap-empty" style="display:none">
+            <div class="home-minimap-empty-emoji">🌱</div>
+            <div>まだ誰もチェックインしていません</div>
+          </div>
+        </div>
       </div>
 
       <div class="today-strip">
@@ -83,6 +99,11 @@
         <div class="screen-subtitle">下北沢で開催中・開催予定のイベント</div>
         <button class="btn-primary" id="event-create-btn" style="display:none;margin-top:14px;width:100%" onclick="openEventCreateScreen()">＋ イベントを作る</button>
       </div>
+      <div class="category-tabs" id="event-cat-tabs" style="padding:16px 16px 0"></div>
+      <div class="category-tabs" id="event-date-tabs" style="padding:0 16px"></div>
+      <div style="padding:0 16px 12px">
+        <select class="auth-input" id="event-circle-filter" onchange="switchEventCircleFilter(this.value)"></select>
+      </div>
       <div class="events-list" id="events-list"></div>
     </div>
 
@@ -107,8 +128,13 @@
         <input class="auth-input" type="number" id="event-create-capacity" required min="1" placeholder="例：20">
         <label class="auth-label">カテゴリ</label>
         <input class="auth-input" type="text" id="event-create-category" required placeholder="例：コミュニティ">
-        <label class="auth-label">絵文字</label>
+        <label class="auth-label">アイキャッチ</label>
+        <div class="image-mode-toggle">
+          <label><input type="radio" name="event-create-image-mode" value="emoji" checked onchange="switchEventImageMode('emoji')"> 絵文字</label>
+          <label><input type="radio" name="event-create-image-mode" value="image" onchange="switchEventImageMode('image')"> 画像をアップロード</label>
+        </div>
         <input class="auth-input" type="text" id="event-create-emoji" placeholder="例：🌿">
+        <input class="auth-input" type="file" id="event-create-image" accept="image/*" style="display:none">
         <label class="auth-label">サークル（任意）</label>
         <select class="auth-input" id="event-create-circle"></select>
         <div class="auth-error" id="event-create-error"></div>
@@ -191,6 +217,14 @@
       <div class="organizer-section">
         <div class="section-title" style="padding:0 16px">通報された投稿</div>
         <div id="organizer-reports-list" style="padding:12px 16px"></div>
+      </div>
+      <div class="organizer-section">
+        <div class="section-title" style="padding:0 16px">イベント管理</div>
+        <div id="organizer-event-management-list" style="padding:12px 16px"></div>
+      </div>
+      <div class="organizer-section">
+        <div class="section-title" style="padding:0 16px">サークル管理</div>
+        <div id="organizer-circle-management-list" style="padding:12px 16px"></div>
       </div>
     </div>
 
@@ -296,8 +330,8 @@
           <div class="stat-num">3</div>
           <div class="stat-label">主催イベント数</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-num">42</div>
+        <div class="stat-card" onclick="openFriendsScreen()" style="cursor:pointer">
+          <div class="stat-num" id="mypage-stat-friends">0</div>
           <div class="stat-label">つながった人</div>
         </div>
         <div class="stat-card">
@@ -338,6 +372,11 @@
           <div class="menu-icon">🔔</div>
           <div class="menu-label">通知設定</div>
           <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item" onclick="toggleTheme()">
+          <div class="menu-icon">🌓</div>
+          <div class="menu-label">表示テーマ</div>
+          <div class="theme-switch" id="theme-toggle-switch"><div class="theme-switch-thumb"></div></div>
         </div>
         <div class="menu-item" onclick="openAccountSettingsScreen()">
           <div class="menu-icon">⚙️</div>
@@ -589,6 +628,21 @@
     </div>
   </div>
 
+  <!-- DELETE CONFIRM MODAL (event/circle共通) -->
+  <div class="modal-overlay" id="delete-confirm-overlay" style="display:none" onclick="if(event.target===this) closeDeleteConfirmModal()">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title" id="delete-confirm-title">削除しますか？</div>
+        <button class="modal-close" onclick="closeDeleteConfirmModal()">×</button>
+      </div>
+      <p class="presence-consent-text" id="delete-confirm-text"></p>
+      <div class="presence-consent-actions">
+        <button class="btn-secondary-outline" onclick="closeDeleteConfirmModal()">キャンセル</button>
+        <button class="organizer-delete-btn" id="delete-confirm-btn" onclick="confirmDelete()">削除する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CIRCLE CREATE MODAL -->
   <div class="modal-overlay" id="circle-create-overlay" style="display:none" onclick="if(event.target===this) closeCircleCreateModal()">
     <div class="modal-sheet">
@@ -597,12 +651,17 @@
         <button class="modal-close" onclick="closeCircleCreateModal()">×</button>
       </div>
       <form class="auth-form" id="circle-create-form" onsubmit="submitCircleCreate(event)">
-        <label class="auth-label">絵文字</label>
-        <input class="auth-input" id="circle-create-emoji" maxlength="4" placeholder="例：🏃">
         <label class="auth-label">サークル名</label>
         <input class="auth-input" id="circle-create-name" required placeholder="例：ランニング部">
         <label class="auth-label">説明</label>
         <textarea class="auth-input" id="circle-create-desc" rows="3" placeholder="どんなサークルか教えてください"></textarea>
+        <label class="auth-label">アイキャッチ</label>
+        <div class="image-mode-toggle">
+          <label><input type="radio" name="circle-create-image-mode" value="emoji" checked onchange="switchCircleImageMode('emoji')"> 絵文字</label>
+          <label><input type="radio" name="circle-create-image-mode" value="image" onchange="switchCircleImageMode('image')"> 画像をアップロード</label>
+        </div>
+        <input class="auth-input" id="circle-create-emoji" maxlength="4" placeholder="例：🏃">
+        <input class="auth-input" type="file" id="circle-create-image" accept="image/*" style="display:none">
         <div class="auth-error" id="circle-create-error"></div>
         <button class="btn-primary auth-submit" type="submit" id="circle-create-submit-btn">作成する</button>
       </form>
@@ -635,6 +694,7 @@
   renderHome();
   renderEvents();
   renderNews();
+  ensureNewsLoaded(); // しもブロのRSSを取得（成功/失敗いずれもrenderNews()/renderHome()を再実行）
   renderMap(); // タブだけ先に描画
   renderTimeline();
   renderRecommendedEvent();

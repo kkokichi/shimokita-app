@@ -47,10 +47,22 @@ async function openEventCreateScreen() {
   circleSelect.innerHTML = '<option value="">なし</option>' +
     circlesCache.map(c => `<option value="${c.id}">${escapeHtml(c.emoji || '🌿')} ${escapeHtml(c.name)}</option>`).join('');
 
+  switchEventImageMode('emoji');
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('event-create').classList.add('active');
   prevScreen = currentScreen;
   currentScreen = 'event-create';
+}
+
+// ── 絵文字 / 画像アップロード 切り替え ──
+function switchEventImageMode(mode) {
+  document.getElementById('event-create-emoji').style.display = mode === 'emoji' ? 'block' : 'none';
+  document.getElementById('event-create-image').style.display = mode === 'image' ? 'block' : 'none';
+}
+
+async function uploadEventImage(file) {
+  const path = `event-images/${Date.now()}_${currentUser.uid}_${file.name}`;
+  return uploadImageWithTimeout(path, file);
 }
 
 async function submitEventCreate(e) {
@@ -63,6 +75,7 @@ async function submitEventCreate(e) {
   const capacity = parseInt(document.getElementById('event-create-capacity').value, 10);
   const category = document.getElementById('event-create-category').value.trim();
   const emoji = document.getElementById('event-create-emoji').value.trim() || '🎉';
+  const imageFile = document.getElementById('event-create-image').files[0] || null;
   const circleId = document.getElementById('event-create-circle').value || null;
   const circleName = circleId ? (circlesCache.find(c => c.id === circleId) || {}).name || null : null;
   const errEl = document.getElementById('event-create-error');
@@ -73,11 +86,30 @@ async function submitEventCreate(e) {
     errEl.textContent = '必須項目を入力してください。';
     return;
   }
+  if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+    errEl.textContent = '画像は5MB以下にしてください。';
+    return;
+  }
 
   btn.disabled = true;
+  const originalBtnText = btn.textContent;
   try {
+    let imageUrl = null;
+    if (imageFile) {
+      btn.textContent = '画像をアップロード中...';
+      try {
+        imageUrl = await uploadEventImage(imageFile);
+      } catch (uploadErr) {
+        console.error('event image upload error:', uploadErr.code, uploadErr.message);
+        errEl.textContent = uploadErr.message && uploadErr.message.includes('タイムアウト')
+          ? uploadErr.message
+          : '画像のアップロードに失敗しました。絵文字に切り替えるか、もう一度お試しください。';
+        return;
+      }
+      btn.textContent = originalBtnText;
+    }
     await db.collection('events').add({
-      title, description, date, time, location, category, emoji, circleId, circleName,
+      title, description, date, time, location, category, emoji, imageUrl, circleId, circleName,
       capacity,
       participants: 0,
       organizer: userProfile.name,
@@ -91,5 +123,6 @@ async function submitEventCreate(e) {
     errEl.textContent = '作成に失敗しました。もう一度お試しください。';
   } finally {
     btn.disabled = false;
+    btn.textContent = originalBtnText;
   }
 }

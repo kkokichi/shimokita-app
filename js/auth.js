@@ -112,7 +112,20 @@ function renderMyPage(profile) {
   document.getElementById('mypage-hobby-value').textContent = profile.hobby;
   document.getElementById('menu-organizer').style.display = profile.role === 'organizer' ? 'flex' : 'none';
   renderMyPageJoinedStats();
+  renderMyPageFriendsCount();
   if (typeof renderMyPageCircles === 'function') renderMyPageCircles();
+  if (typeof updateThemeToggleUI === 'function') updateThemeToggleUI();
+}
+
+// ── フレンド数（実データ） ──
+async function renderMyPageFriendsCount() {
+  if (!currentUser) return;
+  try {
+    const snapshot = await db.collection('friends').where('userIds', 'array-contains', currentUser.uid).get();
+    document.getElementById('mypage-stat-friends').textContent = snapshot.size;
+  } catch (err) {
+    console.error('friends count error:', err.code, err.message);
+  }
 }
 
 // ── JOINED STATS (Firestore実データ) ──

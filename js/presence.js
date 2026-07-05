@@ -98,6 +98,7 @@ function startPresenceCountdown() {
       clearPresenceCountdown();
       updateCheckinButtonUI();
       if (gmap && mapMode === 'presence') renderMarkers();
+      if (typeof refreshHomeMiniMapMarkers === 'function') refreshHomeMiniMapMarkers();
       return;
     }
     updateCheckinButtonUI();
@@ -146,6 +147,7 @@ async function submitPresenceCheckin(e) {
     closePresenceCommentModal();
     showToast('📍 チェックインしました！');
     if (gmap && mapMode === 'presence') renderMarkers();
+    if (typeof refreshHomeMiniMapMarkers === 'function') refreshHomeMiniMapMarkers();
   } catch (err) {
     console.error('presence checkin error:', err.code, err.message);
     errEl.textContent = 'チェックインに失敗しました。もう一度お試しください。';
@@ -165,6 +167,7 @@ async function handlePresenceCheckout() {
     await db.collection('presence').doc(id).delete();
     showToast('チェックアウトしました');
     if (gmap && mapMode === 'presence') renderMarkers();
+    if (typeof refreshHomeMiniMapMarkers === 'function') refreshHomeMiniMapMarkers();
   } catch (err) {
     console.error('presence checkout error:', err.code, err.message);
     showToast('チェックアウトに失敗しました');
@@ -179,6 +182,7 @@ auth.onAuthStateChanged(user => {
     clearPresenceCountdown();
     updateCheckinButtonUI();
     if (gmap && mapMode === 'presence') renderMarkers();
+    if (typeof refreshHomeMiniMapMarkers === 'function') refreshHomeMiniMapMarkers();
     return;
   }
   db.collection('presence').where('userId', '==', user.uid).get().then(snapshot => {
@@ -197,6 +201,7 @@ auth.onAuthStateChanged(user => {
     }
     updateCheckinButtonUI();
     if (gmap && mapMode === 'presence') renderMarkers();
+    if (typeof refreshHomeMiniMapMarkers === 'function') refreshHomeMiniMapMarkers();
   }).catch(err => console.error('presence restore error:', err.code, err.message));
 });
 
@@ -282,13 +287,6 @@ async function refreshPresenceMarkers() {
   if (!gmap) return;
   clearPresenceMarkers();
   const emptyStateEl = document.getElementById('map-empty-state');
-  if (!currentUser) {
-    if (emptyStateEl) {
-      emptyStateEl.innerHTML = '<div><div>ログインすると、コミュニティメンバーの<br>チェックインが見られます。</div><button class="btn-primary" style="margin-top:12px" onclick="openMyPage()">ログインする</button></div>';
-      emptyStateEl.style.display = 'flex';
-    }
-    return;
-  }
   try {
     const snapshot = await db.collection('presence')
       .where('expiresAt', '>', firebase.firestore.Timestamp.now())

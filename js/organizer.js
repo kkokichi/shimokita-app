@@ -15,6 +15,123 @@ function openOrganizerDashboard() {
 function renderOrganizerDashboard() {
   renderOrganizerEvents();
   renderOrganizerReports();
+  renderOrganizerEventManagement();
+  renderOrganizerCircleManagement();
+}
+
+// ── イベント管理（削除） ──
+function renderOrganizerEventManagement() {
+  const listEl = document.getElementById('organizer-event-management-list');
+  if (!listEl) return;
+  if (!events.length) {
+    listEl.innerHTML = '<div class="timeline-empty">イベントがありません。</div>';
+    return;
+  }
+  listEl.innerHTML = events.map(ev => `
+    <div class="organizer-card">
+      <div class="organizer-card-title">${escapeHtml(ev.title)}</div>
+      <div class="organizer-card-sub">${ev.date} ${ev.time}・${ev.participants || 0}/${ev.capacity}人</div>
+      <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('event', '${ev.id}', '${escapeHtml(ev.title)}')">削除する</button>
+    </div>`).join('');
+}
+
+// ── サークル管理（削除） ──
+async function renderOrganizerCircleManagement() {
+  const listEl = document.getElementById('organizer-circle-management-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="timeline-empty">読み込み中...</div>';
+  try {
+    const snapshot = await db.collection('circles').get();
+    if (snapshot.empty) {
+      listEl.innerHTML = '<div class="timeline-empty">サークルがありません。</div>';
+      return;
+    }
+    listEl.innerHTML = snapshot.docs.map(doc => {
+      const c = doc.data();
+      return `
+      <div class="organizer-card">
+        <div class="organizer-card-title">${c.emoji || '🌿'} ${escapeHtml(c.name)}</div>
+        <div class="organizer-card-sub">${escapeHtml(c.description || '')}</div>
+        <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('circle', '${doc.id}', '${escapeHtml(c.name)}')">削除する</button>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('organizer circle management error:', err.code, err.message);
+    listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。</div>';
+  }
+}
+
+// ── 削除確認モーダル（イベント/サークル共通） ──
+let pendingDeleteType = null;
+let pendingDeleteId = null;
+
+function openDeleteConfirmModal(type, id, name) {
+  pendingDeleteType = type;
+  pendingDeleteId = id;
+  const label = type === 'event' ? 'イベント' : 'サークル';
+  document.getElementById('delete-confirm-title').textContent = `${label}を削除しますか？`;
+  document.getElementById('delete-confirm-text').textContent =
+    `「${name}」を削除します。関連する参加者・メンバー・投稿データもすべて削除され、元に戻せません。本当に削除しますか？`;
+  document.getElementById('delete-confirm-overlay').style.display = 'flex';
+}
+
+function closeDeleteConfirmModal() {
+  document.getElementById('delete-confirm-overlay').style.display = 'none';
+  pendingDeleteType = null;
+  pendingDeleteId = null;
+}
+
+async function confirmDelete() {
+  const type = pendingDeleteType;
+  const id = pendingDeleteId;
+  if (!type || !id) return;
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true;
+  try {
+    if (type === 'event') {
+      await cascadeDeleteEvent(id);
+      showToast('イベントを削除しました');
+    } else {
+      await cascadeDeleteCircle(id);
+      showToast('サークルを削除しました');
+    }
+    closeDeleteConfirmModal();
+    renderOrganizerEventManagement();
+    renderOrganizerCircleManagement();
+  } catch (err) {
+    console.error('delete error:', err.code, err.message);
+    showToast('削除に失敗しました。もう一度お試しください。');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function cascadeDeleteEvent(eventId) {
+  const [participantsSnap, autoJoinPostsSnap] = await Promise.all([
+    db.collection('eventParticipants').where('eventId', '==', eventId).get(),
+    db.collection('posts').where('eventId', '==', eventId).where('type', '==', 'auto_join').get(),
+  ]);
+  await Promise.all([
+    ...participantsSnap.docs.map(d => d.ref.delete()),
+    ...autoJoinPostsSnap.docs.map(d => d.ref.delete()),
+  ]);
+  await db.collection('events').doc(eventId).delete();
+}
+
+async function cascadeDeleteCircle(circleId) {
+  const [membersSnap, messagesSnap] = await Promise.all([
+    db.collection('circleMembers').where('circleId', '==', circleId).get(),
+    db.collection('circleMessages').where('circleId', '==', circleId).get(),
+  ]);
+  await Promise.all([
+    ...membersSnap.docs.map(d => d.ref.delete()),
+    ...messagesSnap.docs.map(d => d.ref.delete()),
+  ]);
+  await db.collection('circles').doc(circleId).delete();
+  if (typeof circlesCache !== 'undefined') {
+    const idx = circlesCache.findIndex(c => c.id === circleId);
+    if (idx !== -1) circlesCache.splice(idx, 1);
+  }
 }
 
 // ── PARTICIPANTS ──

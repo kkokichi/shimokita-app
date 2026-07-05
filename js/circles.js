@@ -76,7 +76,7 @@ async function renderCircles() {
       const joined = isCircleMember(c.id);
       return `
       <div class="spot-card" onclick="openCircleDetail('${c.id}')">
-        <div class="spot-icon">${c.emoji || '🌿'}</div>
+        <div class="spot-icon" style="overflow:hidden">${c.imageUrl ? `<img src="${c.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : (c.emoji || '🌿')}</div>
         <div style="flex:1;min-width:0">
           <div class="spot-name">${escapeHtml(c.name)}</div>
           <div class="spot-desc">${escapeHtml(c.description || '')}</div>
@@ -126,6 +126,7 @@ function openCircleCreateModal() {
   }
   document.getElementById('circle-create-form').reset();
   document.getElementById('circle-create-error').textContent = '';
+  switchCircleImageMode('emoji');
   document.getElementById('circle-create-overlay').style.display = 'flex';
 }
 
@@ -133,11 +134,23 @@ function closeCircleCreateModal() {
   document.getElementById('circle-create-overlay').style.display = 'none';
 }
 
+// ── 絵文字 / 画像アップロード 切り替え ──
+function switchCircleImageMode(mode) {
+  document.getElementById('circle-create-emoji').style.display = mode === 'emoji' ? 'block' : 'none';
+  document.getElementById('circle-create-image').style.display = mode === 'image' ? 'block' : 'none';
+}
+
+async function uploadCircleImage(file) {
+  const path = `circle-images/${Date.now()}_${currentUser.uid}_${file.name}`;
+  return uploadImageWithTimeout(path, file);
+}
+
 async function submitCircleCreate(e) {
   e.preventDefault();
   const emoji = document.getElementById('circle-create-emoji').value.trim() || '🌿';
   const name = document.getElementById('circle-create-name').value.trim();
   const description = document.getElementById('circle-create-desc').value.trim();
+  const imageFile = document.getElementById('circle-create-image').files[0] || null;
   const errEl = document.getElementById('circle-create-error');
   const btn = document.getElementById('circle-create-submit-btn');
   errEl.textContent = '';
@@ -145,10 +158,29 @@ async function submitCircleCreate(e) {
     errEl.textContent = 'サークル名を入力してください。';
     return;
   }
+  if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+    errEl.textContent = '画像は5MB以下にしてください。';
+    return;
+  }
   btn.disabled = true;
+  const originalBtnText = btn.textContent;
   try {
+    let imageUrl = null;
+    if (imageFile) {
+      btn.textContent = '画像をアップロード中...';
+      try {
+        imageUrl = await uploadCircleImage(imageFile);
+      } catch (uploadErr) {
+        console.error('circle image upload error:', uploadErr.code, uploadErr.message);
+        errEl.textContent = uploadErr.message && uploadErr.message.includes('タイムアウト')
+          ? uploadErr.message
+          : '画像のアップロードに失敗しました。絵文字に切り替えるか、もう一度お試しください。';
+        return;
+      }
+      btn.textContent = originalBtnText;
+    }
     await db.collection('circles').add({
-      emoji, name, description,
+      emoji, name, description, imageUrl,
       createdBy: currentUser.uid,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
@@ -160,6 +192,7 @@ async function submitCircleCreate(e) {
     errEl.textContent = '作成に失敗しました。もう一度お試しください。';
   } finally {
     btn.disabled = false;
+    btn.textContent = originalBtnText;
   }
 }
 
@@ -181,7 +214,7 @@ function renderCircleDetail(c) {
   const joined = isCircleMember(c.id);
   document.getElementById('circle-detail-content').innerHTML = `
     <div class="detail-banner" style="background:var(--forest-pale)">
-      <div class="detail-banner-emoji">${c.emoji || '🌿'}</div>
+      ${c.imageUrl ? `<img src="${c.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<div class="detail-banner-emoji">${c.emoji || '🌿'}</div>`}
     </div>
     <div class="detail-body">
       <div class="detail-title">${escapeHtml(c.name)}</div>

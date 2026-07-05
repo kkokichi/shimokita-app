@@ -49,21 +49,43 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // events: 誰でも閲覧可、organizerロールのみ作成・更新可
+    // events: 誰でも閲覧可、organizerロールのみ作成・更新・削除可。
+    // updateは「organizerの編集」に加え、「参加人数(participants)を、対応する
+    // eventParticipantsマーカー文書(ID: eventId_userId)の作成・削除と同時にのみ、
+    // かつ定員(capacity)を超えない範囲でのみ」変更することを許可する
+    // （postLikesと同じexistsAfter()パターンで、勝手なカウント書き換え・
+    // 定員超過を防ぐ）
     match /events/{eventId} {
       allow read: if true;
       allow create: if isOrganizer();
-      allow update: if isOrganizer();
-      allow delete: if false;
+      allow update: if isOrganizer() ||
+        (isSignedIn() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']) &&
+          (
+            (request.resource.data.participants == resource.data.get('participants', 0) + 1 &&
+              request.resource.data.participants <= resource.data.capacity &&
+              existsAfter(/databases/$(database)/documents/eventParticipants/$(eventId + '_' + request.auth.uid)) &&
+              !exists(/databases/$(database)/documents/eventParticipants/$(eventId + '_' + request.auth.uid)))
+            ||
+            (request.resource.data.participants == resource.data.get('participants', 0) - 1 &&
+              !existsAfter(/databases/$(database)/documents/eventParticipants/$(eventId + '_' + request.auth.uid)) &&
+              exists(/databases/$(database)/documents/eventParticipants/$(eventId + '_' + request.auth.uid)))
+          ));
+      allow delete: if isOrganizer();
     }
 
     // eventParticipants: 誰でも閲覧可（is_repeat計算のためクライアントが集計クエリを叩く）、
-    // 本人のみ自分の参加登録を作成可（代理登録防止）。
-    // イベントにcircleIdが設定されている場合は、そのサークルのメンバーのみ作成可（サークル限定イベント）
+    // 本人のみ自分の参加登録を作成可（代理登録防止）。ドキュメントIDは eventId_userId
+    // 形式で固定（二重参加登録防止・定員チェックのexistsAfter()判定に必要）。
+    // イベントにcircleIdが設定されている場合は、そのサークルのメンバーのみ作成可（サークル限定イベント）。
+    // 定員に達している場合は作成不可
     match /eventParticipants/{participantId} {
       allow read: if true;
       allow create: if isSignedIn() &&
         request.resource.data.userId == request.auth.uid &&
+        participantId == request.resource.data.eventId + '_' + request.auth.uid &&
+        get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.get('participants', 0) <
+          get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.capacity &&
         (
           eventCircleId(request.resource.data.eventId) == null ||
           exists(/databases/$(database)/documents/circleMembers/$(
@@ -71,7 +93,8 @@ service cloud.firestore {
           ))
         );
       allow update: if isOwner(resource.data.userId);
-      allow delete: if isOwner(resource.data.userId);
+      // 本人に加えorganizerも削除可（イベント削除時のカスケード削除のため）
+      allow delete: if isOwner(resource.data.userId) || isOrganizer();
     }
 
     // posts（タイムライン）: 誰でも閲覧可、本人のみ作成・削除可。
@@ -145,19 +168,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // presence（下北オンライン）: ログイン中のコミュニティメンバーのみ閲覧可、本人のみ作成・削除可
+    // presence（下北オンライン）: 誰でも閲覧可（未ログインでも「みんな今どこ？」を見られる）、
+    // 本人のみ作成・削除可（チェックイン・チェックアウトはログイン必須のまま）
     match /presence/{presenceId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if false;
       allow delete: if isOwner(resource.data.userId);
     }
 
-    // circles: 誰でも閲覧可、organizerロールのみ作成・更新可
+    // circles: 誰でも閲覧可、organizerロールのみ作成・更新・削除可
     match /circles/{circleId} {
       allow read: if true;
       allow create, update: if isOrganizer();
-      allow delete: if false;
+      allow delete: if isOrganizer();
     }
 
     // circleMembers: 誰でも閲覧可、本人のみ作成可（ドキュメントIDは circleId_userId 形式で統一）
@@ -166,19 +190,23 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         request.resource.data.userId == request.auth.uid &&
         memberId == request.resource.data.circleId + '_' + request.auth.uid;
-      allow delete: if isOwner(resource.data.userId);
+      // 本人に加えorganizerも削除可（サークル削除時のカスケード削除のため）
+      allow delete: if isOwner(resource.data.userId) || isOrganizer();
     }
 
-    // circleMessages（サークルチャット）: サークルメンバーのみ閲覧・投稿可
+    // circleMessages（サークルチャット）: サークルメンバーのみ閲覧・投稿可。
+    // organizerはメンバーでなくても閲覧可（サークル削除時のカスケード削除でメッセージを
+    // 取得する必要があるため）
     match /circleMessages/{messageId} {
-      allow read: if isSignedIn() &&
-        exists(/databases/$(database)/documents/circleMembers/$(resource.data.circleId + '_' + request.auth.uid));
+      allow read: if isOrganizer() ||
+        (isSignedIn() &&
+          exists(/databases/$(database)/documents/circleMembers/$(resource.data.circleId + '_' + request.auth.uid)));
       allow create: if isSignedIn() &&
         request.resource.data.userId == request.auth.uid &&
         exists(/databases/$(database)/documents/circleMembers/$(request.resource.data.circleId + '_' + request.auth.uid));
       allow update: if isOwner(resource.data.userId);
-      // 本人に加えorganizerも削除可（通報対応。以前はownerのみで、organizerが
-      // 通報された投稿を削除しようとすると常に失敗するバグがあったため修正）
+      // 本人に加えorganizerも削除可（通報対応・サークル削除時のカスケード削除。以前はownerのみで、
+      // organizerが通報された投稿を削除しようとすると常に失敗するバグがあったため修正）
       allow delete: if isOwner(resource.data.userId) || isOrganizer();
     }
 

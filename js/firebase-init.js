@@ -21,3 +21,30 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage();
+
+// Storageへのアップロード共通ヘルパー（event-images/circle-images双方から使用）。
+// アップロードタスクはネットワークエラー時にSDK内部で自動リトライを繰り返し、
+// Storage未設定・通信不可などの場合は永久にpending状態のままawaitが返ってこない
+// （＝呼び出し元のボタンが無期限に disabled のままになる）ことがあるため、
+// タイムアウトで強制的にキャンセルしてエラーを返すようにする
+function uploadImageWithTimeout(path, file, timeoutMs = 15000) {
+  const ref = storage.ref(path);
+  const task = ref.put(file);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      task.cancel();
+      reject(new Error('画像のアップロードがタイムアウトしました。通信環境をご確認の上、もう一度お試しください。'));
+    }, timeoutMs);
+    task.then(
+      () => {
+        clearTimeout(timer);
+        ref.getDownloadURL().then(resolve, reject);
+      },
+      err => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
