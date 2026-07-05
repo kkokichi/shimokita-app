@@ -1,0 +1,60 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow (TestFlight)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    # Codemagic > Team settings > Integrations > App Store Connect で登録した
+    # インテグレーション名に置き換えること。ここにAPIキーそのものは書かない。
+    integrations:
+      app_store_connect: CHANGE_ME_appstore_integration_name
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.shimokita.app
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: latest
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm install
+
+      - name: Prepare web assets (index.html/css/js -> www)
+        script: npm run build
+
+      - name: Sync Capacitor iOS project
+        script: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

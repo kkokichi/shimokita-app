@@ -1,0 +1,30 @@
+{
+  "name": "shimokita-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node scripts/prepare-web.js",
+    "assets:generate": "capacitor-assets generate --ios"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kkokichi/shimokita-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kkokichi/shimokita-app/issues"
+  },
+  "homepage": "https://github.com/kkokichi/shimokita-app#readme",
+  "dependencies": {
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.1"
+  }
+}

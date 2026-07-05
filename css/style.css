@@ -1232,6 +1232,21 @@ body {
 .reminder-banner-text { font-size: 13px; font-weight: 600; line-height: 1.4; }
 .reminder-banner-close { border: none; background: none; color: rgba(255,255,255,0.6); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
 
+/* ── PWAインストール案内バナー ── */
+.pwa-install-banner {
+  margin: 20px 24px 0;
+  background: var(--terra);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+.pwa-install-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.pwa-install-emoji { font-size: 18px; flex-shrink: 0; }
+.pwa-install-text { font-size: 13px; font-weight: 600; line-height: 1.4; }
+
 /* ── 保存/お気に入りトグルボタン（イベント保存・スポットお気に入り） ── */
 .icon-toggle-btn {
   border: none;
