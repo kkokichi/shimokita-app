@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isOrganizer() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'organizer';
+    }
+
+    // イベントのcircleId（未設定・フィールド自体が無い旧イベントの両方でnullを返す安全な取得）
+    function eventCircleId(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data.get('circleId', null);
+    }
+
+    // users: 誰でも閲覧可、本人のみ作成・更新可
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // events: 誰でも閲覧可、organizerロールのみ作成・更新可
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isOrganizer();
+      allow update: if isOrganizer();
+      allow delete: if false;
+    }
+
+    // eventParticipants: 誰でも閲覧可（is_repeat計算のためクライアントが集計クエリを叩く）、
+    // 本人のみ自分の参加登録を作成可（代理登録防止）。
+    // イベントにcircleIdが設定されている場合は、そのサークルのメンバーのみ作成可（サークル限定イベント）
+    match /eventParticipants/{participantId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        (
+          eventCircleId(request.resource.data.eventId) == null ||
+          exists(/databases/$(database)/documents/circleMembers/$(
+            eventCircleId(request.resource.data.eventId) + '_' + request.auth.uid
+          ))
+        );
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // posts（タイムライン）: 誰でも閲覧可、本人のみ作成・編集・削除可
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId) || isOrganizer();
+    }
+
+    // reports（通報）: 本人が作成可、organizerロールのみ閲覧可
+    match /reports/{reportId} {
+      allow read: if isOrganizer();
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow update: if isOrganizer();
+      allow delete: if false;
+    }
+
+    // presence（下北オンライン）: ログイン中のコミュニティメンバーのみ閲覧可、本人のみ作成・削除可
+    match /presence/{presenceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // circles: 誰でも閲覧可、organizerロールのみ作成・更新可
+    match /circles/{circleId} {
+      allow read: if true;
+      allow create, update: if isOrganizer();
+      allow delete: if false;
+    }
+
+    // circleMembers: 誰でも閲覧可、本人のみ作成可（ドキュメントIDは circleId_userId 形式で統一）
+    match /circleMembers/{memberId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        memberId == request.resource.data.circleId + '_' + request.auth.uid;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // circleMessages（サークル掲示板）: サークルメンバーのみ閲覧・投稿可
+    match /circleMessages/{messageId} {
+      allow read: if isSignedIn() &&
+        exists(/databases/$(database)/documents/circleMembers/$(resource.data.circleId + '_' + request.auth.uid));
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        exists(/databases/$(database)/documents/circleMembers/$(request.resource.data.circleId + '_' + request.auth.uid));
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // savedEvents（マイページ「保存したイベント」）: 誰でも閲覧可、本人のみ作成・削除可
+    // ドキュメントIDは userId_eventId 形式で統一
+    match /savedEvents/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        docId == request.resource.data.userId + '_' + request.resource.data.eventId;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // favoriteSpots（マイページ「よく行くスポット」）: 誰でも閲覧可、本人のみ作成・削除可
+    // ドキュメントIDは userId_spotId 形式で統一
+    match /favoriteSpots/{docId} {
+      allow read: if true;
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        docId == request.resource.data.userId + '_' + request.resource.data.spotId;
+      allow delete: if isOwner(resource.data.userId);
+    }
+  }
+}

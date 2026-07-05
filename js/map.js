@@ -1,6 +1,7 @@
 // ── MAP (Google Maps) ──
 let gmap = null;
 let gmMarkers = [];
+let mapMode = 'spots'; // 'spots' | 'presence'
 
 function initMap() {
   gmap = new google.maps.Map(document.getElementById('gmap-div'), {
@@ -45,11 +46,33 @@ function switchCategory(cat) {
   renderMap();
 }
 
-function renderMarkers() {
-  if (!gmap) return;
-  const cfg = catConfig[activeCategory];
+function switchMapMode(mode) {
+  mapMode = mode;
+  document.getElementById('mode-btn-spots').classList.toggle('active', mode === 'spots');
+  document.getElementById('mode-btn-presence').classList.toggle('active', mode === 'presence');
+  document.getElementById('cat-tabs').style.display = mode === 'spots' ? 'flex' : 'none';
+  document.getElementById('spots-list').style.display = mode === 'spots' ? 'block' : 'none';
+  document.getElementById('map-info').style.display = 'none';
+  document.getElementById('map-empty-state').style.display = 'none';
+  renderMarkers();
+}
+
+function clearSpotMarkers() {
   gmMarkers.forEach(m => m.setMap(null));
   gmMarkers = [];
+}
+
+function renderMarkers() {
+  if (!gmap) return;
+  if (mapMode === 'presence') {
+    clearSpotMarkers();
+    refreshPresenceMarkers();
+    return;
+  }
+  document.getElementById('map-empty-state').style.display = 'none';
+  if (typeof clearPresenceMarkers === 'function') clearPresenceMarkers();
+  const cfg = catConfig[activeCategory];
+  clearSpotMarkers();
   const filtered = spots.filter(s => s.cat === activeCategory);
   const bounds = new google.maps.LatLngBounds();
   filtered.forEach(s => {
@@ -103,7 +126,7 @@ function renderSpotsList() {
     <div class="spot-card" onclick="showSpotDetail('${s.id}')">
       <div class="spot-icon" style="background:${cfg.bg}">${s.icon}</div>
       <div style="flex:1;min-width:0"><div class="spot-name">${s.name}</div><div class="spot-desc">${s.desc}</div><div class="spot-rating">★ ${s.rating}</div></div>
-      <div style="color:var(--ink-soft);font-size:18px">›</div>
+      <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" onclick="event.stopPropagation();toggleFavoriteSpot('${s.id}', this)">♡</button>
     </div>`).join('')}
   `;
 }
@@ -127,7 +150,10 @@ function renderSpotDetail(s) {
       <div class="detail-banner-emoji">${s.icon}</div>
     </div>
     <div class="detail-body">
-      <div class="detail-category"><span class="pill" style="background:${cfg.bg};color:${cfg.color}">${s.cat}</span></div>
+      <div class="detail-category" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="pill" style="background:${cfg.bg};color:${cfg.color}">${s.cat}</span>
+        <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" style="font-size:26px" onclick="toggleFavoriteSpot('${s.id}', this)">♡</button>
+      </div>
       <div class="detail-title">${s.name}</div>
       <div class="detail-info-row">
         <div class="detail-info-icon">📍</div>

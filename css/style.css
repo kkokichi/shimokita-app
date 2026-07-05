@@ -783,6 +783,310 @@ body {
 }
 .news-card-date { font-size: 11px; color: var(--ink-soft); }
 
+/* ── AUTH / PROFILE SETUP ── */
+.auth-body { padding: 24px; display: flex; flex-direction: column; }
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 4px;
+}
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+.auth-tab.active { background: var(--surface); color: var(--forest); box-shadow: var(--shadow-sm); }
+.auth-form { display: flex; flex-direction: column; }
+.auth-label { font-size: 12px; font-weight: 600; color: var(--ink-mid); margin-top: 14px; margin-bottom: 6px; }
+.auth-input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  font-size: 14px;
+  font-family: var(--font);
+  color: var(--ink);
+  resize: none;
+}
+.auth-input:focus { outline: none; border-color: var(--forest); }
+.auth-error { color: var(--terra-dark); font-size: 12px; margin-top: 10px; min-height: 14px; }
+
+/* ── TIMELINE SCREEN ── */
+.timeline-post-form { padding: 16px 16px 8px; display: flex; flex-direction: column; }
+.timeline-post-form .auth-submit { margin-top: 10px; }
+.timeline-list { padding: 8px 16px 16px; }
+.timeline-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.timeline-card-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.timeline-card-name { font-size: 13px; font-weight: 700; color: var(--forest); }
+.timeline-card-date { font-size: 11px; color: var(--ink-soft); }
+.timeline-card-content { font-size: 14px; color: var(--ink); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.timeline-card-actions { margin-top: 10px; display: flex; justify-content: flex-end; }
+.timeline-report-btn {
+  border: none;
+  background: none;
+  font-size: 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.timeline-report-btn:active { opacity: 0.6; }
+.timeline-empty { text-align: center; font-size: 13px; color: var(--ink-soft); padding: 40px 20px; }
+
+/* ── ORGANIZER DASHBOARD ── */
+.organizer-section { margin-bottom: 8px; }
+.organizer-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-sm);
+}
+.organizer-card-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.organizer-card-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+.organizer-participant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink);
+}
+.organizer-delete-btn {
+  border: 1.5px solid var(--terra-dark);
+  background: none;
+  color: var(--terra-dark);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.organizer-delete-btn:active { opacity: 0.7; }
+
+/* ── PRESENCE (下北オンライン) ── */
+.presence-cta { padding: 20px 24px 0; }
+.presence-checkin-btn {
+  width: 100%;
+  background: var(--forest-pale);
+  color: var(--forest);
+  border: 1.5px solid var(--forest-light);
+  border-radius: 16px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: transform 0.1s, background 0.2s, color 0.2s;
+}
+.presence-checkin-btn:active { transform: scale(0.98); }
+.presence-checkin-btn.checked-in {
+  background: var(--terra);
+  color: white;
+  border-color: var(--terra-dark);
+}
+
+/* ── RECOMMEND CARD ── */
+.recommend-card {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.recommend-card:active { transform: scale(0.98); box-shadow: var(--shadow-md); }
+.recommend-card-emoji {
+  width: 44px; height: 44px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.recommend-card-body { flex: 1; min-width: 0; }
+.recommend-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recommend-card-date { font-size: 12px; color: var(--ink-soft); margin-bottom: 2px; }
+.recommend-card-organizer { font-size: 11px; color: var(--ink-soft); }
+.recommend-card-arrow { font-size: 18px; color: var(--ink-soft); flex-shrink: 0; margin-left: 8px; }
+
+.presence-consent-text { font-size: 13px; color: var(--ink-mid); line-height: 1.7; margin-bottom: 20px; }
+.presence-consent-actions { display: flex; gap: 10px; }
+.presence-consent-actions .btn-primary { flex: 1; }
+.btn-secondary-outline {
+  flex: 1;
+  background: none;
+  border: 1.5px solid var(--line);
+  color: var(--ink-mid);
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.btn-secondary-outline:active { opacity: 0.7; }
+
+/* ── MAP MODE TOGGLE ── */
+.map-mode-toggle {
+  display: flex;
+  gap: 8px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 4px;
+  margin-top: 12px;
+}
+.map-mode-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+}
+.map-mode-btn.active { background: var(--surface); color: var(--forest); box-shadow: var(--shadow-sm); }
+
+.map-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  line-height: 1.6;
+  padding: 24px;
+  background: rgba(250,250,248,0.9);
+  z-index: 2;
+}
+
+/* ── PRESENCE SPEECH BUBBLE (custom map overlay) ── */
+.presence-bubble {
+  position: absolute;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1.5px solid var(--forest-light);
+  border-radius: 14px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  max-width: 160px;
+  cursor: pointer;
+}
+.presence-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--forest-light);
+}
+.presence-bubble-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.presence-bubble-report {
+  border: none;
+  background: none;
+  color: var(--terra-dark);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-sheet {
+  background: var(--surface);
+  width: 100%;
+  max-height: 75%;
+  overflow-y: auto;
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px 28px;
+}
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.modal-title { font-size: 16px; font-weight: 800; color: var(--ink); }
+.modal-close { border: none; background: none; font-size: 22px; color: var(--ink-soft); cursor: pointer; line-height: 1; padding: 4px; }
+
+.presence-info-card {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.presence-info-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.presence-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--forest-pale);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.presence-info-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.presence-info-time { font-size: 11px; color: var(--ink-soft); }
+.presence-info-comment { font-size: 13px; color: var(--ink-mid); margin-top: 8px; line-height: 1.5; }
+.presence-info-actions { margin-top: 10px; display: flex; justify-content: flex-end; }
+
+.profile-view-body { display: flex; flex-direction: column; gap: 14px; }
+.profile-view-row { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--ink); }
+.profile-view-label { font-size: 11px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+.auth-submit { margin-top: 20px; width: 100%; }
+.auth-submit:disabled { opacity: 0.6; cursor: default; }
+
 /* ── MYPAGE ── */
 #mypage .mypage-hero {
   background: linear-gradient(160deg, var(--forest) 0%, #2D5A45 100%);
@@ -840,6 +1144,17 @@ body {
 }
 .stat-label { font-size: 12px; color: var(--ink-soft); font-weight: 500; }
 
+.mypage-met-section { padding: 20px 0 0; }
+.met-person-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; }
+.met-person-chip {
+  background: var(--forest-pale);
+  color: var(--forest);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .menu-list { padding: 16px; margin-top: 8px; }
 .menu-item {
   background: var(--surface);
@@ -890,3 +1205,47 @@ body {
 .cat-vintage { background: #F3E5F5; color: #6A1B9A; }
 .cat-sauna { background: #E3F2FD; color: #0D47A1; }
 .cat-live { background: #FCE4EC; color: #880E4F; }
+
+/* ── サークル ── */
+.circle-badge {
+  background: var(--forest-pale);
+  color: var(--forest);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── リマインダーバナー ── */
+.reminder-banner {
+  margin: 20px 24px 0;
+  background: var(--forest);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+.reminder-banner-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.reminder-banner-emoji { font-size: 18px; flex-shrink: 0; }
+.reminder-banner-text { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.reminder-banner-close { border: none; background: none; color: rgba(255,255,255,0.6); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+/* ── 保存/お気に入りトグルボタン（イベント保存・スポットお気に入り） ── */
+.icon-toggle-btn {
+  border: none;
+  background: none;
+  font-size: 20px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 6px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.icon-toggle-btn.active { color: var(--terra); }
+.icon-toggle-btn:active { transform: scale(0.9); }
+
+/* ── アカウント設定 ── */
+.account-settings-section { padding: 8px 24px 24px; }
+.account-settings-section .section-title { padding-top: 8px; }

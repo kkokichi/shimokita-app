@@ -1,5 +1,7 @@
 // ── DATA ──
-const events = [
+// SEED_EVENTS: 初期データ。migrateSeedEventsOnce()（js/eventCreate.js）でFirestoreの
+// eventsコレクションへ既存IDのまま一度だけ移行するための参照用。
+const SEED_EVENTS = [
   { id:'1', title:'下北沢コミュニティラン', description:'初心者歓迎のゆるりとしたランニングイベント。下北沢駅集合→羽根木公園を目指します。走り終えた後は近くのカフェで交流タイム。一人参加が9割なので、気軽に来てください。', date:'2026年7月11日（土）', time:'08:00〜10:00', location:'下北沢駅 南口ロータリー', capacity:20, participants:13, organizer:'coen コミュニティチーム', category:'スポーツ', emoji:'🏃', grad:['#1C3A2F','#2D5A45'] },
   { id:'2', title:'ピアノコンサート by Yuki', description:'アメリカ在住のピアニスト・Yukiによる小規模でアットホームなコンサート。ハーフムーンホールのYamaha C3グランドピアノで奏でる、静かな夜を。定員30名の特別な時間。', date:'2026年8月16日（日）', time:'19:00〜21:00', location:'Half Moon Hall（下北沢）', capacity:30, participants:22, organizer:'coen × Yuki', category:'音楽', emoji:'🎹', grad:['#2C1810','#5C3020'] },
   { id:'3', title:'下北沢まちビンゴ', description:'25店舗をめぐってビンゴを完成させよう！参加店舗でキーワードを集めてLINEで送信。景品もあります。家族・友人・一人でも楽しめる下北沢探索イベント。', date:'2026年7月11日〜20日', time:'各店舗営業時間内', location:'下北沢エリア全域', capacity:1000, participants:342, organizer:'下北沢商店街振興組合 × coen', category:'まちあそび', emoji:'🎯', grad:['#C06030','#E8956D'] },
@@ -11,6 +13,9 @@ const events = [
   { id:'9', title:'ナイトマーケット', description:'夜の下北沢が舞台のクラフトマーケット。ハンドメイド作品や下北沢産食品を販売。ライブパフォーマンスも。街の夜を彩る特別な一夜。', date:'2026年7月26日（土）', time:'18:00〜22:00', location:'BONUS TRACK', capacity:300, participants:134, organizer:'BONUS TRACK × coen', category:'マーケット', emoji:'🌙', grad:['#1A1A3A','#3A3A7A'] },
   { id:'10', title:'こども自然探検隊', description:'羽根木公園で子どもたちが自然を探検するイベント。虫取り・植物観察・プチ工作。親子で楽しめる休日の午前中。', date:'2026年8月3日（日）', time:'09:30〜12:00', location:'羽根木公園', capacity:20, participants:12, organizer:'coen × 羽根木公園', category:'こども', emoji:'🌿', grad:['#2D6B1C','#4D9B3C'] },
 ];
+
+// events: Firestoreの`events`コレクションから読み込む可変配列（js/eventCreate.jsのinitEventsListenerが更新する）
+let events = [];
 
 const spots = [
   // カフェ（実店舗ベース／2026年7月時点）
