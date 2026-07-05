@@ -2,6 +2,21 @@
 let currentUser = null;
 let userProfile = null;
 
+// avatarUrlがあれば画像を、なければ既存の🌿絵文字を表示するフォールバック
+// （js/events.jsのeventBannerEmojiHtmlと同じ考え方。呼び出し側のdivが既に
+// サイズ・背景を持つクラスを付けている前提で、中身だけを返す）
+function userAvatarHtml(user) {
+  const url = user && user.avatarUrl;
+  return url
+    ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
+    : '🌿';
+}
+
+async function uploadAvatarImage(file) {
+  const path = `avatar-images/${currentUser.uid}/${Date.now()}_${file.name}`;
+  return uploadImageWithTimeout(path, file);
+}
+
 function switchAuthTab(tab) {
   document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
   document.getElementById('auth-tab-signup').classList.toggle('active', tab === 'signup');
@@ -58,29 +73,52 @@ function handleSignup(e) {
     .finally(() => { btn.disabled = false; });
 }
 
-function handleProfileSubmit(e) {
+async function handleProfileSubmit(e) {
   e.preventDefault();
   if (!currentUser) return;
   const name = document.getElementById('profile-name').value.trim();
   const ageRange = document.getElementById('profile-age').value;
   const hobby = document.getElementById('profile-hobby').value.trim();
   const bio = document.getElementById('profile-bio').value.trim();
+  const avatarFile = document.getElementById('profile-avatar-image').files[0] || null;
   const errEl = document.getElementById('profile-error');
   const btn = e.target.querySelector('.auth-submit');
   errEl.textContent = '';
+  if (avatarFile && avatarFile.size > 5 * 1024 * 1024) {
+    errEl.textContent = '画像は5MB以下にしてください。';
+    return;
+  }
+  const originalBtnText = btn.textContent;
   btn.disabled = true;
-  const profile = { name, ageRange, hobby, bio, email: currentUser.email };
-  db.collection('users').doc(currentUser.uid).set({
-    ...profile,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-  })
-    .then(() => {
-      userProfile = profile;
-      showToast('🎉 プロフィールを登録しました！');
-      openMyPage();
-    })
-    .catch(err => { errEl.textContent = authErrorMessage(err); })
-    .finally(() => { btn.disabled = false; });
+  try {
+    let avatarUrl = null;
+    if (avatarFile) {
+      btn.textContent = '画像をアップロード中...';
+      try {
+        avatarUrl = await uploadAvatarImage(avatarFile);
+      } catch (uploadErr) {
+        console.error('avatar upload error:', uploadErr.code, uploadErr.message);
+        errEl.textContent = uploadErr.message && uploadErr.message.includes('タイムアウト')
+          ? uploadErr.message
+          : '画像のアップロードに失敗しました。もう一度お試しください。';
+        return;
+      }
+      btn.textContent = originalBtnText;
+    }
+    const profile = { name, ageRange, hobby, bio, avatarUrl, email: currentUser.email };
+    await db.collection('users').doc(currentUser.uid).set({
+      ...profile,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    userProfile = profile;
+    showToast('🎉 プロフィールを登録しました！');
+    openMyPage();
+  } catch (err) {
+    errEl.textContent = authErrorMessage(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
+  }
 }
 
 function handleLogout() {
@@ -106,6 +144,7 @@ function openMyPage() {
 }
 
 function renderMyPage(profile) {
+  document.getElementById('mypage-avatar').innerHTML = userAvatarHtml(profile);
   document.getElementById('mypage-name').textContent = profile.name;
   document.getElementById('mypage-bio').textContent = profile.bio || `${profile.ageRange}・趣味は${profile.hobby}`;
   document.getElementById('mypage-meta').textContent = profile.email;
@@ -182,6 +221,8 @@ function renderMetPeopleSection(ev, names) {
 // ── アカウント設定 ──
 function openAccountSettingsScreen() {
   if (!userProfile) return;
+  document.getElementById('account-avatar-preview').innerHTML = userAvatarHtml(userProfile);
+  document.getElementById('account-avatar-image').value = '';
   document.getElementById('account-name').value = userProfile.name || '';
   document.getElementById('account-age').value = userProfile.ageRange || '';
   document.getElementById('account-hobby').value = userProfile.hobby || '';
@@ -203,22 +244,40 @@ async function handleAccountProfileUpdate(e) {
   const ageRange = document.getElementById('account-age').value;
   const hobby = document.getElementById('account-hobby').value.trim();
   const bio = document.getElementById('account-bio').value.trim();
+  const avatarFile = document.getElementById('account-avatar-image').files[0] || null;
   const errEl = document.getElementById('account-profile-error');
   const btn = e.target.querySelector('.auth-submit');
   errEl.textContent = '';
+  if (avatarFile && avatarFile.size > 5 * 1024 * 1024) {
+    errEl.textContent = '画像は5MB以下にしてください。';
+    return;
+  }
+  const originalBtnText = btn.textContent;
   btn.disabled = true;
   try {
-    await db.collection('users').doc(currentUser.uid).update({ name, ageRange, hobby, bio });
-    userProfile.name = name;
-    userProfile.ageRange = ageRange;
-    userProfile.hobby = hobby;
-    userProfile.bio = bio;
+    const updates = { name, ageRange, hobby, bio };
+    if (avatarFile) {
+      btn.textContent = '画像をアップロード中...';
+      try {
+        updates.avatarUrl = await uploadAvatarImage(avatarFile);
+      } catch (uploadErr) {
+        console.error('avatar upload error:', uploadErr.code, uploadErr.message);
+        errEl.textContent = uploadErr.message && uploadErr.message.includes('タイムアウト')
+          ? uploadErr.message
+          : '画像のアップロードに失敗しました。もう一度お試しください。';
+        return;
+      }
+      btn.textContent = originalBtnText;
+    }
+    await db.collection('users').doc(currentUser.uid).update(updates);
+    Object.assign(userProfile, updates);
     renderMyPage(userProfile);
     showToast('プロフィールを更新しました');
   } catch (err) {
     errEl.textContent = authErrorMessage(err);
   } finally {
     btn.disabled = false;
+    btn.textContent = originalBtnText;
   }
 }
 

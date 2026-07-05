@@ -1,5 +1,4 @@
 rules_version = '2';
-// cross-service Firestore権限の付与トリガー用（再デプロイで内容を変える）
 service firebase.storage {
   match /b/{bucket}/o {
     match /event-images/{imageId} {
@@ -13,6 +12,16 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null &&
         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'organizer' &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+    // avatar-images: 本人のUIDと一致するパスにのみ書き込み可（誰でも自分のアバターは
+    // 設定できるべきなので、event/circle画像と違いorganizer判定は不要。
+    // パス自体にUIDを含めることで、firestore.get()のcross-service呼び出しを使わずに
+    // アクセス制御できる）
+    match /avatar-images/{uid}/{imageId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid &&
         request.resource.size < 5 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
     }

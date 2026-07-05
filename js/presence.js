@@ -376,7 +376,7 @@ async function renderPresenceInfoSheet(entries) {
       return `
       <div class="presence-info-card">
         <div class="presence-info-row" onclick="openProfileViewModal('${e.userId}', null)">
-          <div class="presence-avatar">🌿</div>
+          <div class="presence-avatar">${userAvatarHtml(u)}</div>
           <div style="flex:1;min-width:0">
             <div class="presence-info-name">${escapeHtml(u.name || '不明なユーザー')}</div>
             <div class="presence-info-time">${formatTimeAgo(e.checkedInAt)}</div>
@@ -439,6 +439,9 @@ async function openProfileViewModal(uid, checkedInAt) {
         <button class="modal-close" onclick="closeProfileViewModal()">×</button>
       </div>
       <div class="profile-view-body">
+        <div style="text-align:center">
+          <div class="avatar-circle" style="width:64px;height:64px;font-size:30px;margin:0 auto 4px;background:var(--forest-pale);color:var(--forest);border:none;overflow:hidden">${userAvatarHtml(u)}</div>
+        </div>
         ${checkedInAt ? `<div class="profile-view-row"><span class="profile-view-label">チェックイン</span><span>${formatTimeAgo(checkedInAt)}</span></div>` : ''}
         <div class="profile-view-row"><span class="profile-view-label">趣味</span><span>${escapeHtml(u.hobby || '未設定')}</span></div>
         <div class="profile-view-row"><span class="profile-view-label">自己紹介</span><span>${escapeHtml(u.bio || '未設定')}</span></div>

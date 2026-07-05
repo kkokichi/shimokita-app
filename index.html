@@ -291,6 +291,8 @@
         <div class="screen-subtitle">あなたのことを教えてください</div>
       </div>
       <form class="auth-body auth-form" id="profile-form" onsubmit="handleProfileSubmit(event)">
+        <label class="auth-label">アイコン画像（任意）</label>
+        <input class="auth-input" type="file" id="profile-avatar-image" accept="image/*">
         <label class="auth-label">名前</label>
         <input class="auth-input" type="text" id="profile-name" required placeholder="例：下北 花子">
         <label class="auth-label">年代</label>
@@ -492,6 +494,9 @@
       </div>
       <form class="auth-body auth-form account-settings-section" id="account-profile-form" onsubmit="handleAccountProfileUpdate(event)">
         <div class="section-title">プロフィール編集</div>
+        <label class="auth-label">アイコン画像</label>
+        <div class="avatar-circle" id="account-avatar-preview" style="width:64px;height:64px;font-size:30px;margin-bottom:10px;background:var(--forest-pale);border:none;overflow:hidden"></div>
+        <input class="auth-input" type="file" id="account-avatar-image" accept="image/*">
         <label class="auth-label">名前</label>
         <input class="auth-input" type="text" id="account-name" required>
         <label class="auth-label">年代</label>

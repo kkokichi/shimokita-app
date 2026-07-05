@@ -353,6 +353,7 @@ function renderCircleChatMessages(messages, circleId) {
   });
   listEl.innerHTML = sorted.map(m => renderChatBubbleHtml(m, m.userId === currentUser.uid, {
     senderName: m.userName || '名無しさん',
+    avatarUrl: m.userAvatarUrl || null,
     reportButtonHtml: `<button class="timeline-report-btn" onclick="handleCircleMessageReport('${m.id}','${circleId}')">🚩</button>`,
   })).join('');
   const detailEl = document.getElementById('circle-detail');
@@ -384,6 +385,7 @@ async function handleCircleMessagePost(e, circleId) {
       circleId,
       userId: currentUser.uid,
       userName: userProfile ? userProfile.name : '名無しさん',
+      userAvatarUrl: userProfile ? (userProfile.avatarUrl || null) : null,
       content: text,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });

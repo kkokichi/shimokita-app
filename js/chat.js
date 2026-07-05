@@ -2,6 +2,7 @@
 let activeChatUnsubscribe = null;
 let activeChatThreadId = null;
 let activeChatOtherUid = null;
+let activeChatOtherProfile = null;
 let currentChatMessagesCache = [];
 
 function clearActiveChatListener() {
@@ -15,10 +16,10 @@ function clearActiveChatListener() {
 // reportButtonHtmlは呼び出し側で組み立てる（メッセージ本文をonclick属性に埋め込まない
 // ことで、悪意あるメッセージ内容によるHTML/JSインジェクションを避けるため）
 function renderChatBubbleHtml(msg, isMine, opts = {}) {
-  const { senderName, avatar, reportButtonHtml } = opts;
+  const { senderName, avatarUrl, reportButtonHtml } = opts;
   return `
     <div class="chat-bubble-row ${isMine ? 'mine' : 'theirs'}">
-      ${!isMine ? `<div class="chat-avatar">${avatar || '🌿'}</div>` : ''}
+      ${!isMine ? `<div class="chat-avatar">${userAvatarHtml({ avatarUrl })}</div>` : ''}
       <div class="chat-bubble-col">
         ${!isMine && senderName ? `<div class="chat-sender-name">${escapeHtml(senderName)}</div>` : ''}
         <div class="chat-bubble">${escapeHtml(msg.content)}</div>
@@ -40,6 +41,7 @@ function openChatThread(pairId, otherUid) {
   clearActiveChatListener();
   activeChatThreadId = pairId;
   activeChatOtherUid = otherUid;
+  activeChatOtherProfile = null;
 
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('chat-thread').classList.add('active');
@@ -47,30 +49,35 @@ function openChatThread(pairId, otherUid) {
   currentScreen = 'chat-thread';
 
   document.getElementById('chat-thread-name').textContent = '読み込み中...';
-  fetchUserBrief(otherUid).then(u => {
-    const nameEl = document.getElementById('chat-thread-name');
-    if (nameEl) nameEl.textContent = u.name || '不明なユーザー';
-  });
-
   document.getElementById('chat-message-list').innerHTML = '<div class="timeline-empty">読み込み中...</div>';
   const form = document.getElementById('chat-message-form');
   if (form) form.reset();
   document.getElementById('chat-message-error').textContent = '';
 
-  activeChatUnsubscribe = db.collection('chatMessages')
-    .where('threadId', '==', pairId)
-    .onSnapshot(snapshot => {
-      renderChatMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, err => {
-      console.error('chat messages listener error:', err.code, err.message);
-      const listEl = document.getElementById('chat-message-list');
-      if (listEl) listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。ブロックされている可能性があります。</div>';
-    });
+  // 相手のプロフィール（アバター用）を先に読み込んでから購読を開始する
+  // （先に購読すると、最初のスナップショットがアバター未取得のまま描画されてしまうため）
+  fetchUserBrief(otherUid).then(u => {
+    activeChatOtherProfile = u;
+    const nameEl = document.getElementById('chat-thread-name');
+    if (nameEl) nameEl.textContent = u.name || '不明なユーザー';
+  }).finally(() => {
+    if (activeChatThreadId !== pairId) return; // 別スレッドに切り替わっていたら何もしない
+    activeChatUnsubscribe = db.collection('chatMessages')
+      .where('threadId', '==', pairId)
+      .onSnapshot(snapshot => {
+        renderChatMessages(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, err => {
+        console.error('chat messages listener error:', err.code, err.message);
+        const listEl = document.getElementById('chat-message-list');
+        if (listEl) listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。ブロックされている可能性があります。</div>';
+      });
+  });
 }
 
 function closeChatThread() {
   clearActiveChatListener();
   activeChatThreadId = null;
+  activeChatOtherProfile = null;
   activeChatOtherUid = null;
   currentChatMessagesCache = [];
 }
@@ -91,6 +98,7 @@ function renderChatMessages(messages) {
     return at.toMillis() - bt.toMillis();
   });
   listEl.innerHTML = sorted.map(m => renderChatBubbleHtml(m, m.senderId === currentUser.uid, {
+    avatarUrl: activeChatOtherProfile ? activeChatOtherProfile.avatarUrl : null,
     reportButtonHtml: `<button class="timeline-report-btn" onclick="reportChatMessage('${m.id}')">🚩</button>`,
   })).join('');
   scrollChatToBottom('chat-message-list');

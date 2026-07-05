@@ -84,7 +84,7 @@ function renderPostBodyHtml(p, meta, compact) {
   const name = renderPostAuthorName(p);
   const header = `
     <div class="timeline-card-header">
-      <div class="friend-row-avatar timeline-card-avatar">🌿</div>
+      <div class="friend-row-avatar timeline-card-avatar">${userAvatarHtml({ avatarUrl: p.userAvatarUrl })}</div>
       <div class="timeline-card-meta">
         <span class="timeline-card-name">${escapeHtml(name)}</span>
         <span class="timeline-card-date">${formatPostDate(p.createdAt)}</span>
@@ -262,6 +262,7 @@ async function handleRetweet(postId) {
       tx.set(newPostRef, {
         userId: currentUser.uid,
         userName: userProfile ? userProfile.name : '名無しさん',
+        userAvatarUrl: userProfile ? (userProfile.avatarUrl || null) : null,
         eventId: null,
         type: 'retweet',
         content: '',
@@ -302,6 +303,7 @@ async function submitReply(parentPostId) {
     await db.collection('posts').add({
       userId: currentUser.uid,
       userName: userProfile ? userProfile.name : '名無しさん',
+      userAvatarUrl: userProfile ? (userProfile.avatarUrl || null) : null,
       eventId: null,
       type: 'free',
       content: text,
@@ -363,6 +365,7 @@ async function handleTimelinePost(e) {
     await db.collection('posts').add({
       userId: currentUser.uid,
       userName: userProfile ? userProfile.name : '名無しさん',
+      userAvatarUrl: userProfile ? (userProfile.avatarUrl || null) : null,
       eventId: null,
       type: 'free',
       content: text,

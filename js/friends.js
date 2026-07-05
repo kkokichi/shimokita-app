@@ -174,7 +174,7 @@ async function openFriendDetailModal(uid) {
       </div>
       <div class="profile-view-body">
         <div style="text-align:center">
-          <div class="avatar-circle" style="width:64px;height:64px;font-size:30px;margin:0 auto 4px;background:var(--forest-pale);color:var(--forest);border:none">🌿</div>
+          <div class="avatar-circle" style="width:64px;height:64px;font-size:30px;margin:0 auto 4px;background:var(--forest-pale);color:var(--forest);border:none;overflow:hidden">${userAvatarHtml(u)}</div>
         </div>
         <div class="profile-view-row"><span class="profile-view-label">自己紹介</span><span>${escapeHtml(u.bio || '未設定')}</span></div>
         ${commonGround.length ? `<div class="friend-badges">${commonGround.map(b => `<span class="pill pill-green">${escapeHtml(b)}</span>`).join('')}</div>` : ''}
@@ -214,7 +214,7 @@ async function renderFriendsScreen() {
         const u = await fetchUserBrief(r.fromUserId);
         return `
         <div class="friend-row">
-          <div class="friend-row-avatar">🌿</div>
+          <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
           <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
           <button class="join-btn-sm" onclick="acceptFriendRequest('${r.id}','${r.fromUserId}')">承認する</button>
           <button class="organizer-delete-btn" onclick="declineFriendRequest('${r.id}')">拒否</button>
@@ -232,7 +232,7 @@ async function renderFriendsScreen() {
         const [u, badges] = await Promise.all([fetchUserBrief(otherUid), computeCommonGround(otherUid)]);
         return `
         <div class="friend-row" style="cursor:pointer" onclick="openFriendDetailModal('${otherUid}')">
-          <div class="friend-row-avatar">🌿</div>
+          <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
           <div style="flex:1;min-width:0">
             <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
             ${badges.length ? `<div class="friend-badges">${badges.map(b => `<span class="pill pill-green">${escapeHtml(b)}</span>`).join('')}</div>` : ''}
@@ -247,7 +247,7 @@ async function renderFriendsScreen() {
         const u = await fetchUserBrief(r.toUserId);
         return `
         <div class="friend-row">
-          <div class="friend-row-avatar">🌿</div>
+          <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
           <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
           <span class="pill pill-gray">申請中</span>
           <button class="organizer-delete-btn" onclick="cancelSentRequest('${r.id}')">取り消す</button>
@@ -260,7 +260,7 @@ async function renderFriendsScreen() {
         const u = await fetchUserBrief(b.blockedUserId);
         return `
         <div class="friend-row">
-          <div class="friend-row-avatar">🌿</div>
+          <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
           <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
           <button class="organizer-delete-btn" onclick="unblockUser('${b.blockedUserId}')">解除</button>
         </div>`;
@@ -348,7 +348,7 @@ async function renderRecommendations() {
       const reasons = candidates.get(uid);
       return `
       <div class="friend-row" style="cursor:pointer" onclick="openFriendDetailModal('${uid}')">
-        <div class="friend-row-avatar">🌿</div>
+        <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
         <div style="flex:1;min-width:0">
           <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
           <div class="friend-reason">${reasons.map(r => escapeHtml(r)).join('・')}</div>
@@ -411,7 +411,7 @@ async function searchFriendsByName(query) {
       }
       return `
       <div class="friend-row" style="cursor:pointer" onclick="openFriendDetailModal('${d.id}')">
-        <div class="friend-row-avatar">🌿</div>
+        <div class="friend-row-avatar">${userAvatarHtml(u)}</div>
         <div class="friend-row-name">${escapeHtml(u.name || '不明なユーザー')}</div>
         ${actionHtml}
       </div>`;
