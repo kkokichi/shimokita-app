@@ -1087,6 +1087,7 @@ body {
   font-size: 13px;
   color: var(--ink);
 }
+.organizer-card-actions { display: flex; gap: 8px; }
 .organizer-delete-btn {
   border: 1.5px solid var(--terra-dark);
   background: none;
@@ -1099,6 +1100,18 @@ body {
   font-family: var(--font);
 }
 .organizer-delete-btn:active { opacity: 0.7; }
+.organizer-edit-btn {
+  border: 1.5px solid var(--forest);
+  background: none;
+  color: var(--forest);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+}
+.organizer-edit-btn:active { opacity: 0.7; }
 
 /* ── PRESENCE (下北オンライン) ── */
 .presence-cta { padding: 20px 24px 0; }

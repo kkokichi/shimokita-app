@@ -26,15 +26,31 @@ function initEventsListener() {
   }, err => console.error('events onSnapshot error:', err.code, err.message));
 }
 
-// ── CREATE FORM ──
+// ── CREATE / EDIT FORM ──
+let editingEventId = null;
+let editingEventImageUrl = null;
+
 async function openEventCreateScreen() {
   if (!userProfile || userProfile.role !== 'organizer') {
     showToast('主催者のみイベントを作成できます');
     return;
   }
+  editingEventId = null;
+  editingEventImageUrl = null;
   document.getElementById('event-create-form').reset();
   document.getElementById('event-create-error').textContent = '';
+  document.getElementById('event-create-screen-title').textContent = 'イベントを作る';
+  document.getElementById('event-create-submit-btn').textContent = '作成する';
 
+  await populateEventCircleSelect();
+  switchEventImageMode('emoji');
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.getElementById('event-create').classList.add('active');
+  prevScreen = currentScreen;
+  currentScreen = 'event-create';
+}
+
+async function populateEventCircleSelect() {
   const circleSelect = document.getElementById('event-create-circle');
   if (circlesCache.length === 0) {
     try {
@@ -46,8 +62,34 @@ async function openEventCreateScreen() {
   }
   circleSelect.innerHTML = '<option value="">なし</option>' +
     circlesCache.map(c => `<option value="${c.id}">${escapeHtml(c.emoji || '🌿')} ${escapeHtml(c.name)}</option>`).join('');
+}
 
+async function openEventEditScreen(eventId) {
+  if (!userProfile || userProfile.role !== 'organizer') {
+    showToast('主催者のみ編集できます');
+    return;
+  }
+  const ev = events.find(e => e.id === eventId);
+  if (!ev) return;
+  editingEventId = eventId;
+  editingEventImageUrl = ev.imageUrl || null;
+  document.getElementById('event-create-form').reset();
+  document.getElementById('event-create-error').textContent = '';
+  document.getElementById('event-create-screen-title').textContent = 'イベントを編集';
+  document.getElementById('event-create-submit-btn').textContent = '更新する';
+
+  await populateEventCircleSelect();
+  document.getElementById('event-create-title').value = ev.title || '';
+  document.getElementById('event-create-description').value = ev.description || '';
+  document.getElementById('event-create-date').value = ev.date || '';
+  document.getElementById('event-create-time').value = ev.time || '';
+  document.getElementById('event-create-location').value = ev.location || '';
+  document.getElementById('event-create-capacity').value = ev.capacity || '';
+  document.getElementById('event-create-category').value = ev.category || '';
+  document.getElementById('event-create-emoji').value = ev.emoji || '';
+  document.getElementById('event-create-circle').value = ev.circleId || '';
   switchEventImageMode('emoji');
+
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('event-create').classList.add('active');
   prevScreen = currentScreen;
@@ -94,7 +136,7 @@ async function submitEventCreate(e) {
   btn.disabled = true;
   const originalBtnText = btn.textContent;
   try {
-    let imageUrl = null;
+    let imageUrl = editingEventId ? editingEventImageUrl : null;
     if (imageFile) {
       btn.textContent = '画像をアップロード中...';
       try {
@@ -108,19 +150,28 @@ async function submitEventCreate(e) {
       }
       btn.textContent = originalBtnText;
     }
-    await db.collection('events').add({
-      title, description, date, time, location, category, emoji, imageUrl, circleId, circleName,
-      capacity,
-      participants: 0,
-      organizer: userProfile.name,
-      grad: ['#1C3A2F', '#2D5A45'],
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    showToast('🎉 イベントを作成しました！');
-    navigate('events');
+    if (editingEventId) {
+      await db.collection('events').doc(editingEventId).update({
+        title, description, date, time, location, category, emoji, imageUrl, circleId, circleName, capacity,
+      });
+      showToast('イベントを更新しました');
+      navigate('organizer');
+      renderOrganizerEventManagement();
+    } else {
+      await db.collection('events').add({
+        title, description, date, time, location, category, emoji, imageUrl, circleId, circleName,
+        capacity,
+        participants: 0,
+        organizer: userProfile.name,
+        grad: ['#1C3A2F', '#2D5A45'],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showToast('🎉 イベントを作成しました！');
+      navigate('events');
+    }
   } catch (err) {
-    console.error('event create error:', err.code, err.message);
-    errEl.textContent = '作成に失敗しました。もう一度お試しください。';
+    console.error('event create/update error:', err.code, err.message);
+    errEl.textContent = (editingEventId ? '更新' : '作成') + 'に失敗しました。もう一度お試しください。';
   } finally {
     btn.disabled = false;
     btn.textContent = originalBtnText;

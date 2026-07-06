@@ -17,7 +17,9 @@ const SEED_EVENTS = [
 // events: Firestoreの`events`コレクションから読み込む可変配列（js/eventCreate.jsのinitEventsListenerが更新する）
 let events = [];
 
-const spots = [
+// SEED_SPOTS: 初期データ。migrateSeedSpotsOnce()（js/map.js）でFirestoreの
+// spotsコレクションへ既存IDのまま一度だけ移行するための参照用。
+const SEED_SPOTS = [
   // カフェ（実店舗ベース／2026年7月時点）
   { id:'c1', name:'fuzkue', cat:'カフェ', lat:35.6596, lng:139.6641, address:'東京都世田谷区代田2-36-14（BONUS TRACK内）', hours:'12:00〜22:00', desc:'私語厳禁の「本の読める店」。読書に没頭できる独特のルールを持つ、下北沢を代表する読書専門カフェ。', rating:'4.5', icon:'☕' },
   { id:'c2', name:'BEAR POND ESPRESSO', cat:'カフェ', lat:35.6631, lng:139.6649, address:'東京都世田谷区北沢2-36-12 1F', hours:'平日・土 10:30〜18:00／日 11:00〜18:30（火休）', phone:'03-5454-2486', desc:'行列必至の名店。芸術的なラテアートと濃厚な自家製エスプレッソが評判の小さなカフェ。', rating:'4.6', icon:'☕' },
@@ -53,6 +55,9 @@ const spots = [
   { id:'k5', name:'カレーの店・八月', cat:'カレー', lat:35.6594158, lng:139.6676191, address:'東京都世田谷区北沢2-14-19', desc:'東口徒歩3分。日替わりで3〜4種のカレーを提供、店主が一人でレシピを考案。', icon:'🍛' },
   { id:'k6', name:'YOUNG', cat:'カレー', lat:35.6597129, lng:139.66379, address:'東京都世田谷区代田5-1-16 1F', desc:'西口徒歩5分。牛骨・鶏ガラのフォンドボーをベースにした欧風カレー。', icon:'🍛' },
 ];
+
+// spots: Firestoreの`spots`コレクションから読み込む可変配列（js/map.jsのinitSpotsListenerが更新する）
+let spots = [];
 
 const news = [
   { id:'1', title:'BONUS TRACK リニューアルオープン！新テナント情報', date:'2026年6月28日', category:'まちニュース', summary:'下北沢の人気スポットBONUS TRACKが一部リニューアル。新たに3店舗が加わり、さらに充実した空間に。', emoji:'🏗️' },

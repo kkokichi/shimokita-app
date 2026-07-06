@@ -17,9 +17,10 @@ function renderOrganizerDashboard() {
   renderOrganizerReports();
   renderOrganizerEventManagement();
   renderOrganizerCircleManagement();
+  renderOrganizerSpotManagement();
 }
 
-// ── イベント管理（削除） ──
+// ── イベント管理（編集・削除） ──
 function renderOrganizerEventManagement() {
   const listEl = document.getElementById('organizer-event-management-list');
   if (!listEl) return;
@@ -31,47 +32,75 @@ function renderOrganizerEventManagement() {
     <div class="organizer-card">
       <div class="organizer-card-title">${escapeHtml(ev.title)}</div>
       <div class="organizer-card-sub">${ev.date} ${ev.time}・${ev.participants || 0}/${ev.capacity}人</div>
-      <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('event', '${ev.id}', '${escapeHtml(ev.title)}')">削除する</button>
+      <div class="organizer-card-actions">
+        <button class="organizer-edit-btn" onclick="openEventEditScreen('${ev.id}')">編集する</button>
+        <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('event', '${ev.id}', '${escapeHtml(ev.title)}')">削除する</button>
+      </div>
     </div>`).join('');
 }
 
-// ── サークル管理（削除） ──
+// ── サークル管理（編集・削除） ──
+let organizerCirclesCache = [];
+
 async function renderOrganizerCircleManagement() {
   const listEl = document.getElementById('organizer-circle-management-list');
   if (!listEl) return;
   listEl.innerHTML = '<div class="timeline-empty">読み込み中...</div>';
   try {
     const snapshot = await db.collection('circles').get();
-    if (snapshot.empty) {
+    organizerCirclesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (organizerCirclesCache.length === 0) {
       listEl.innerHTML = '<div class="timeline-empty">サークルがありません。</div>';
       return;
     }
-    listEl.innerHTML = snapshot.docs.map(doc => {
-      const c = doc.data();
-      return `
+    listEl.innerHTML = organizerCirclesCache.map(c => `
       <div class="organizer-card">
         <div class="organizer-card-title">${c.emoji || '🌿'} ${escapeHtml(c.name)}</div>
         <div class="organizer-card-sub">${escapeHtml(c.description || '')}</div>
-        <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('circle', '${doc.id}', '${escapeHtml(c.name)}')">削除する</button>
-      </div>`;
-    }).join('');
+        <div class="organizer-card-actions">
+          <button class="organizer-edit-btn" onclick="openCircleEditModal('${c.id}')">編集する</button>
+          <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('circle', '${c.id}', '${escapeHtml(c.name)}')">削除する</button>
+        </div>
+      </div>`).join('');
   } catch (err) {
     console.error('organizer circle management error:', err.code, err.message);
     listEl.innerHTML = '<div class="timeline-empty">読み込みに失敗しました。</div>';
   }
 }
 
+// ── スポット管理（編集・削除） ──
+function renderOrganizerSpotManagement() {
+  const listEl = document.getElementById('organizer-spot-management-list');
+  if (!listEl) return;
+  if (!spots.length) {
+    listEl.innerHTML = '<div class="timeline-empty">スポットがありません。</div>';
+    return;
+  }
+  listEl.innerHTML = spots.map(s => `
+    <div class="organizer-card">
+      <div class="organizer-card-title">${s.icon || '📍'} ${escapeHtml(s.name)}</div>
+      <div class="organizer-card-sub">${escapeHtml(s.cat)}・${escapeHtml(s.address || '')}</div>
+      <div class="organizer-card-actions">
+        <button class="organizer-edit-btn" onclick="openSpotEditModal('${s.id}')">編集する</button>
+        <button class="organizer-delete-btn" onclick="openDeleteConfirmModal('spot', '${s.id}', '${escapeHtml(s.name)}')">削除する</button>
+      </div>
+    </div>`).join('');
+}
+
 // ── 削除確認モーダル（イベント/サークル共通） ──
 let pendingDeleteType = null;
 let pendingDeleteId = null;
 
+const DELETE_TYPE_LABELS = { event: 'イベント', circle: 'サークル', spot: 'スポット' };
+
 function openDeleteConfirmModal(type, id, name) {
   pendingDeleteType = type;
   pendingDeleteId = id;
-  const label = type === 'event' ? 'イベント' : 'サークル';
+  const label = DELETE_TYPE_LABELS[type] || 'データ';
   document.getElementById('delete-confirm-title').textContent = `${label}を削除しますか？`;
-  document.getElementById('delete-confirm-text').textContent =
-    `「${name}」を削除します。関連する参加者・メンバー・投稿データもすべて削除され、元に戻せません。本当に削除しますか？`;
+  document.getElementById('delete-confirm-text').textContent = type === 'spot'
+    ? `「${name}」を削除します。元に戻せません。本当に削除しますか？`
+    : `「${name}」を削除します。関連する参加者・メンバー・投稿データもすべて削除され、元に戻せません。本当に削除しますか？`;
   document.getElementById('delete-confirm-overlay').style.display = 'flex';
 }
 
@@ -91,13 +120,17 @@ async function confirmDelete() {
     if (type === 'event') {
       await cascadeDeleteEvent(id);
       showToast('イベントを削除しました');
-    } else {
+    } else if (type === 'circle') {
       await cascadeDeleteCircle(id);
       showToast('サークルを削除しました');
+    } else if (type === 'spot') {
+      await db.collection('spots').doc(id).delete();
+      showToast('スポットを削除しました');
     }
     closeDeleteConfirmModal();
     renderOrganizerEventManagement();
     renderOrganizerCircleManagement();
+    renderOrganizerSpotManagement();
   } catch (err) {
     console.error('delete error:', err.code, err.message);
     showToast('削除に失敗しました。もう一度お試しください。');

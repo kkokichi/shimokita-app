@@ -110,9 +110,24 @@ function renderNews() {
   `).join('');
 }
 
-function truncateSummary(text, max = 80) {
+// 文字数で単純に切ると文の途中で終わってしまうため、直近の句点（。！？）を
+// 探してそこで終わるように調整する（見つからない場合のみ「…」で強制的に切る）
+function trimToSentenceEnd(text, maxLength = 120) {
   if (!text) return '';
-  return text.length > max ? text.slice(0, max) + '…' : text;
+  if (text.length <= maxLength) return text;
+  const trimmed = text.slice(0, maxLength);
+  const lastPeriod = Math.max(
+    trimmed.lastIndexOf('。'),
+    trimmed.lastIndexOf('！'),
+    trimmed.lastIndexOf('？')
+  );
+  return lastPeriod > maxLength * 0.5
+    ? trimmed.slice(0, lastPeriod + 1)
+    : trimmed + '…';
+}
+
+function truncateSummary(text, max = 80) {
+  return trimToSentenceEnd(text, max);
 }
 
 // ── 詳細ページ（取得したRSSの情報のみを表示。本文全体は複製せず、
@@ -140,8 +155,8 @@ function renderNewsDetail(n) {
         <div class="detail-info-icon">📅</div>
         <div><div class="detail-info-label">掲載日</div><div class="detail-info-value">${n.date}</div></div>
       </div>
-      <div class="detail-desc-label">概要</div>
-      <div class="detail-desc">${n.summary || '（概要はありません）'}</div>
+      <div class="detail-desc-label">記事の一部より</div>
+      <div class="detail-desc">${n.summary ? trimToSentenceEnd(n.summary, 200) : '（抜粋はありません）'}</div>
       ${n.link ? `
       <a class="detail-map-placeholder" href="${n.link}" target="_blank" rel="noopener" style="text-decoration:none">
         <div class="detail-map-icon">📰</div>

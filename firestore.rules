@@ -303,6 +303,13 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.userId);
     }
 
+    // spots（マップのスポット情報）: 誰でも閲覧可、organizerロールのみ作成・更新・削除可
+    match /spots/{spotId} {
+      allow read: if true;
+      allow create, update: if isOrganizer();
+      allow delete: if isOrganizer();
+    }
+
     // favoriteSpots（マイページ「よく行くスポット」）: 誰でも閲覧可、本人のみ作成・削除可
     // ドキュメントIDは userId_spotId 形式で統一
     match /favoriteSpots/{docId} {

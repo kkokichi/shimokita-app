@@ -111,7 +111,7 @@
     <div class="screen" id="event-create">
       <button class="detail-back" onclick="goBack()">‹</button>
       <div class="screen-header">
-        <div class="screen-title">イベントを作る</div>
+        <div class="screen-title" id="event-create-screen-title">イベントを作る</div>
       </div>
       <form class="auth-body auth-form" id="event-create-form" onsubmit="submitEventCreate(event)">
         <label class="auth-label">タイトル</label>
@@ -225,6 +225,13 @@
       <div class="organizer-section">
         <div class="section-title" style="padding:0 16px">サークル管理</div>
         <div id="organizer-circle-management-list" style="padding:12px 16px"></div>
+      </div>
+      <div class="organizer-section">
+        <div class="section-title" style="padding:0 16px;display:flex;align-items:center;justify-content:space-between">
+          <span>スポット管理</span>
+          <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px" onclick="openSpotCreateModal()">＋ スポットを追加</button>
+        </div>
+        <div id="organizer-spot-management-list" style="padding:12px 16px"></div>
       </div>
     </div>
 
@@ -652,7 +659,7 @@
   <div class="modal-overlay" id="circle-create-overlay" style="display:none" onclick="if(event.target===this) closeCircleCreateModal()">
     <div class="modal-sheet">
       <div class="modal-header">
-        <div class="modal-title">🌱 サークルを作る</div>
+        <div class="modal-title" id="circle-create-modal-title">🌱 サークルを作る</div>
         <button class="modal-close" onclick="closeCircleCreateModal()">×</button>
       </div>
       <form class="auth-form" id="circle-create-form" onsubmit="submitCircleCreate(event)">
@@ -669,6 +676,45 @@
         <input class="auth-input" type="file" id="circle-create-image" accept="image/*" style="display:none">
         <div class="auth-error" id="circle-create-error"></div>
         <button class="btn-primary auth-submit" type="submit" id="circle-create-submit-btn">作成する</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SPOT CREATE / EDIT MODAL -->
+  <div class="modal-overlay" id="spot-edit-overlay" style="display:none" onclick="if(event.target===this) closeSpotEditModal()">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title" id="spot-edit-modal-title">📍 スポットを追加</div>
+        <button class="modal-close" onclick="closeSpotEditModal()">×</button>
+      </div>
+      <form class="auth-form" id="spot-edit-form" onsubmit="submitSpotEdit(event)">
+        <label class="auth-label">スポット名</label>
+        <input class="auth-input" id="spot-edit-name" required placeholder="例：fuzkue">
+        <label class="auth-label">カテゴリ</label>
+        <select class="auth-input" id="spot-edit-cat" required></select>
+        <label class="auth-label">説明</label>
+        <textarea class="auth-input" id="spot-edit-desc" rows="3" required placeholder="お店・スポットの紹介"></textarea>
+        <label class="auth-label">住所</label>
+        <input class="auth-input" id="spot-edit-address" required placeholder="例：東京都世田谷区北沢2-XX-XX">
+        <label class="auth-label">緯度</label>
+        <input class="auth-input" type="text" inputmode="decimal" id="spot-edit-lat" required placeholder="例：35.6618">
+        <label class="auth-label">経度</label>
+        <input class="auth-input" type="text" inputmode="decimal" id="spot-edit-lng" required placeholder="例：139.6663">
+        <label class="auth-label">営業時間（任意）</label>
+        <input class="auth-input" id="spot-edit-hours" placeholder="例：11:00〜20:00">
+        <label class="auth-label">電話番号（任意）</label>
+        <input class="auth-input" id="spot-edit-phone" placeholder="例：03-0000-0000">
+        <label class="auth-label">評価（任意）</label>
+        <input class="auth-input" id="spot-edit-rating" placeholder="例：4.5">
+        <label class="auth-label">アイキャッチ</label>
+        <div class="image-mode-toggle">
+          <label><input type="radio" name="spot-edit-image-mode" value="emoji" checked onchange="switchSpotImageMode('emoji')"> 絵文字</label>
+          <label><input type="radio" name="spot-edit-image-mode" value="image" onchange="switchSpotImageMode('image')"> 画像をアップロード</label>
+        </div>
+        <input class="auth-input" id="spot-edit-icon" maxlength="4" placeholder="例：☕">
+        <input class="auth-input" type="file" id="spot-edit-image" accept="image/*" style="display:none">
+        <div class="auth-error" id="spot-edit-error"></div>
+        <button class="btn-primary auth-submit" type="submit" id="spot-edit-submit-btn">追加する</button>
       </form>
     </div>
   </div>
@@ -704,6 +750,7 @@
   renderTimeline();
   renderRecommendedEvent();
   initEventsListener(); // Firestoreのeventsをリアルタイム購読（migrateSeedEventsOnce()は手動実行のみ）
+  initSpotsListener(); // Firestoreのspotsをリアルタイム購読（migrateSeedSpotsOnce()は手動実行のみ）
   initPwaInstallBanner(); // iOS Safari向けの「ホーム画面に追加」静的案内（Androidはbeforeinstallpromptイベントで自動表示）
 </script>
 <script>

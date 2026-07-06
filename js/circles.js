@@ -118,14 +118,41 @@ async function handleCircleJoinToggle(circleId, btn) {
   }
 }
 
-// ── CREATE ──
+// ── CREATE / EDIT ──
+let editingCircleId = null;
+let editingCircleImageUrl = null;
+
 function openCircleCreateModal() {
   if (!userProfile || userProfile.role !== 'organizer') {
     showToast('主催者のみサークルを作成できます');
     return;
   }
+  editingCircleId = null;
+  editingCircleImageUrl = null;
   document.getElementById('circle-create-form').reset();
   document.getElementById('circle-create-error').textContent = '';
+  document.getElementById('circle-create-modal-title').textContent = '🌱 サークルを作る';
+  document.getElementById('circle-create-submit-btn').textContent = '作成する';
+  switchCircleImageMode('emoji');
+  document.getElementById('circle-create-overlay').style.display = 'flex';
+}
+
+function openCircleEditModal(circleId) {
+  if (!userProfile || userProfile.role !== 'organizer') {
+    showToast('主催者のみ編集できます');
+    return;
+  }
+  const c = organizerCirclesCache.find(x => x.id === circleId);
+  if (!c) return;
+  editingCircleId = circleId;
+  editingCircleImageUrl = c.imageUrl || null;
+  document.getElementById('circle-create-form').reset();
+  document.getElementById('circle-create-error').textContent = '';
+  document.getElementById('circle-create-modal-title').textContent = 'サークルを編集';
+  document.getElementById('circle-create-submit-btn').textContent = '更新する';
+  document.getElementById('circle-create-name').value = c.name || '';
+  document.getElementById('circle-create-desc').value = c.description || '';
+  document.getElementById('circle-create-emoji').value = c.emoji || '';
   switchCircleImageMode('emoji');
   document.getElementById('circle-create-overlay').style.display = 'flex';
 }
@@ -165,7 +192,7 @@ async function submitCircleCreate(e) {
   btn.disabled = true;
   const originalBtnText = btn.textContent;
   try {
-    let imageUrl = null;
+    let imageUrl = editingCircleId ? editingCircleImageUrl : null;
     if (imageFile) {
       btn.textContent = '画像をアップロード中...';
       try {
@@ -179,17 +206,25 @@ async function submitCircleCreate(e) {
       }
       btn.textContent = originalBtnText;
     }
-    await db.collection('circles').add({
-      emoji, name, description, imageUrl,
-      createdBy: currentUser.uid,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    closeCircleCreateModal();
-    showToast('サークルを作成しました！');
-    renderCircles();
+    if (editingCircleId) {
+      await db.collection('circles').doc(editingCircleId).update({ emoji, name, description, imageUrl });
+      closeCircleCreateModal();
+      showToast('サークルを更新しました');
+      renderOrganizerCircleManagement();
+      if (currentScreen === 'circles') renderCircles();
+    } else {
+      await db.collection('circles').add({
+        emoji, name, description, imageUrl,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      closeCircleCreateModal();
+      showToast('サークルを作成しました！');
+      renderCircles();
+    }
   } catch (err) {
-    console.error('circle create error:', err.code, err.message);
-    errEl.textContent = '作成に失敗しました。もう一度お試しください。';
+    console.error('circle create/update error:', err.code, err.message);
+    errEl.textContent = (editingCircleId ? '更新' : '作成') + 'に失敗しました。もう一度お試しください。';
   } finally {
     btn.disabled = false;
     btn.textContent = originalBtnText;

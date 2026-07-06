@@ -3,6 +3,32 @@ let gmap = null;
 let gmMarkers = [];
 let mapMode = 'spots'; // 'spots' | 'presence'
 
+// ── FIRESTORE MIGRATION（一度だけ・冪等） ──
+// 本番実行は手動トリガーのみ（index.htmlのinitスクリプトからは呼び出さない）。
+async function migrateSeedSpotsOnce() {
+  const existing = await db.collection('spots').limit(1).get();
+  if (!existing.empty) {
+    console.log('migrateSeedSpotsOnce: skip（spotsコレクションに既存データがあります）');
+    return;
+  }
+  const batch = db.batch();
+  SEED_SPOTS.forEach(s => {
+    const { id, ...rest } = s;
+    batch.set(db.collection('spots').doc(id), rest);
+  });
+  await batch.commit();
+  console.log(`migrateSeedSpotsOnce: ${SEED_SPOTS.length}件のスポットを移行しました`);
+}
+
+// ── LIVE LISTENER ──
+function initSpotsListener() {
+  db.collection('spots').onSnapshot(snapshot => {
+    spots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderMap();
+    if (typeof renderOrganizerSpotManagement === 'function') renderOrganizerSpotManagement();
+  }, err => console.error('spots onSnapshot error:', err.code, err.message));
+}
+
 function initMap() {
   gmap = new google.maps.Map(document.getElementById('gmap-div'), {
     center: { lat: 35.6618, lng: 139.6663 },
@@ -125,8 +151,8 @@ function renderSpotsList() {
     <div style="padding:0 0 8px"><div class="section-title">${activeCategory} 一覧</div></div>
     ${filtered.map(s => `
     <div class="spot-card" onclick="showSpotDetail('${s.id}')">
-      <div class="spot-icon" style="background:${cfg.bg}">${s.icon}</div>
-      <div style="flex:1;min-width:0"><div class="spot-name">${s.name}</div><div class="spot-desc">${s.desc}</div>${s.rating ? `<div class="spot-rating">★ ${s.rating}</div>` : ''}</div>
+      <div class="spot-icon" style="background:${cfg.bg};overflow:hidden">${s.imageUrl ? `<img src="${s.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : s.icon}</div>
+      <div style="flex:1;min-width:0"><div class="spot-name">${escapeHtml(s.name)}</div><div class="spot-desc">${escapeHtml(s.desc)}</div>${s.rating ? `<div class="spot-rating">★ ${escapeHtml(s.rating)}</div>` : ''}</div>
       <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" onclick="event.stopPropagation();toggleFavoriteSpot('${s.id}', this)">♡</button>
     </div>`).join('')}
   `;
@@ -148,37 +174,165 @@ function renderSpotDetail(s) {
   const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address);
   document.getElementById('spot-detail-content').innerHTML = `
     <div class="detail-banner" style="background:${cfg.bg}">
-      <div class="detail-banner-emoji">${s.icon}</div>
+      ${s.imageUrl ? `<img src="${s.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<div class="detail-banner-emoji">${s.icon}</div>`}
     </div>
     <div class="detail-body">
       <div class="detail-category" style="display:flex;align-items:center;justify-content:space-between">
-        <span class="pill" style="background:${cfg.bg};color:${cfg.color}">${s.cat}</span>
+        <span class="pill" style="background:${cfg.bg};color:${cfg.color}">${escapeHtml(s.cat)}</span>
         <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" style="font-size:26px" onclick="toggleFavoriteSpot('${s.id}', this)">♡</button>
       </div>
-      <div class="detail-title">${s.name}</div>
+      <div class="detail-title">${escapeHtml(s.name)}</div>
       <div class="detail-info-row">
         <div class="detail-info-icon">📍</div>
-        <div><div class="detail-info-label">住所</div><div class="detail-info-value">${s.address}</div></div>
+        <div><div class="detail-info-label">住所</div><div class="detail-info-value">${escapeHtml(s.address)}</div></div>
       </div>
       ${s.hours ? `<div class="detail-info-row">
         <div class="detail-info-icon">🕒</div>
-        <div><div class="detail-info-label">営業時間</div><div class="detail-info-value">${s.hours}</div></div>
+        <div><div class="detail-info-label">営業時間</div><div class="detail-info-value">${escapeHtml(s.hours)}</div></div>
       </div>` : ''}
       ${s.phone ? `<div class="detail-info-row">
         <div class="detail-info-icon">📞</div>
-        <div><div class="detail-info-label">電話番号</div><div class="detail-info-value">${s.phone}</div></div>
+        <div><div class="detail-info-label">電話番号</div><div class="detail-info-value">${escapeHtml(s.phone)}</div></div>
       </div>` : ''}
       ${s.rating ? `<div class="detail-info-row">
         <div class="detail-info-icon">★</div>
-        <div><div class="detail-info-label">評価</div><div class="detail-info-value">${s.rating}</div></div>
+        <div><div class="detail-info-label">評価</div><div class="detail-info-value">${escapeHtml(s.rating)}</div></div>
       </div>` : ''}
       <a class="detail-map-placeholder" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">
         <div class="detail-map-icon">🗺</div>
         <div class="detail-map-text">Google マップで開く</div>
-        <div style="font-size:11px;color:var(--forest);opacity:0.7">${s.address}</div>
+        <div style="font-size:11px;color:var(--forest);opacity:0.7">${escapeHtml(s.address)}</div>
       </a>
       <div class="detail-desc-label">お店について</div>
-      <div class="detail-desc">${s.desc}</div>
+      <div class="detail-desc">${escapeHtml(s.desc)}</div>
     </div>
   `;
+}
+
+// ── SPOT CREATE / EDIT（主催者ダッシュボード） ──
+let editingSpotId = null;
+let editingSpotImageUrl = null;
+
+function populateSpotCatSelect(selected) {
+  const select = document.getElementById('spot-edit-cat');
+  select.innerHTML = Object.keys(catConfig).map(cat =>
+    `<option value="${cat}"${cat === selected ? ' selected' : ''}>${catConfig[cat].icon} ${cat}</option>`).join('');
+}
+
+function switchSpotImageMode(mode) {
+  document.getElementById('spot-edit-icon').style.display = mode === 'emoji' ? 'block' : 'none';
+  document.getElementById('spot-edit-image').style.display = mode === 'image' ? 'block' : 'none';
+}
+
+async function uploadSpotImage(file) {
+  const path = `spot-images/${Date.now()}_${currentUser.uid}_${file.name}`;
+  return uploadImageWithTimeout(path, file);
+}
+
+function openSpotCreateModal() {
+  if (!userProfile || userProfile.role !== 'organizer') {
+    showToast('主催者のみスポットを追加できます');
+    return;
+  }
+  editingSpotId = null;
+  editingSpotImageUrl = null;
+  document.getElementById('spot-edit-form').reset();
+  document.getElementById('spot-edit-error').textContent = '';
+  document.getElementById('spot-edit-modal-title').textContent = '📍 スポットを追加';
+  document.getElementById('spot-edit-submit-btn').textContent = '追加する';
+  populateSpotCatSelect(Object.keys(catConfig)[0]);
+  switchSpotImageMode('emoji');
+  document.getElementById('spot-edit-overlay').style.display = 'flex';
+}
+
+function openSpotEditModal(spotId) {
+  if (!userProfile || userProfile.role !== 'organizer') {
+    showToast('主催者のみ編集できます');
+    return;
+  }
+  const s = spots.find(sp => sp.id === spotId);
+  if (!s) return;
+  editingSpotId = spotId;
+  editingSpotImageUrl = s.imageUrl || null;
+  document.getElementById('spot-edit-form').reset();
+  document.getElementById('spot-edit-error').textContent = '';
+  document.getElementById('spot-edit-modal-title').textContent = 'スポットを編集';
+  document.getElementById('spot-edit-submit-btn').textContent = '更新する';
+  populateSpotCatSelect(s.cat);
+  document.getElementById('spot-edit-name').value = s.name || '';
+  document.getElementById('spot-edit-desc').value = s.desc || '';
+  document.getElementById('spot-edit-address').value = s.address || '';
+  document.getElementById('spot-edit-lat').value = s.lat != null ? s.lat : '';
+  document.getElementById('spot-edit-lng').value = s.lng != null ? s.lng : '';
+  document.getElementById('spot-edit-hours').value = s.hours || '';
+  document.getElementById('spot-edit-phone').value = s.phone || '';
+  document.getElementById('spot-edit-rating').value = s.rating || '';
+  document.getElementById('spot-edit-icon').value = s.icon || '';
+  switchSpotImageMode('emoji');
+  document.getElementById('spot-edit-overlay').style.display = 'flex';
+}
+
+function closeSpotEditModal() {
+  document.getElementById('spot-edit-overlay').style.display = 'none';
+}
+
+async function submitSpotEdit(e) {
+  e.preventDefault();
+  const name = document.getElementById('spot-edit-name').value.trim();
+  const cat = document.getElementById('spot-edit-cat').value;
+  const desc = document.getElementById('spot-edit-desc').value.trim();
+  const address = document.getElementById('spot-edit-address').value.trim();
+  const lat = parseFloat(document.getElementById('spot-edit-lat').value);
+  const lng = parseFloat(document.getElementById('spot-edit-lng').value);
+  const hours = document.getElementById('spot-edit-hours').value.trim() || null;
+  const phone = document.getElementById('spot-edit-phone').value.trim() || null;
+  const rating = document.getElementById('spot-edit-rating').value.trim() || null;
+  const icon = document.getElementById('spot-edit-icon').value.trim() || '📍';
+  const imageFile = document.getElementById('spot-edit-image').files[0] || null;
+  const errEl = document.getElementById('spot-edit-error');
+  const btn = document.getElementById('spot-edit-submit-btn');
+  errEl.textContent = '';
+
+  if (!name || !cat || !desc || !address || isNaN(lat) || isNaN(lng)) {
+    errEl.textContent = '必須項目を入力してください。';
+    return;
+  }
+  if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+    errEl.textContent = '画像は5MB以下にしてください。';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalBtnText = btn.textContent;
+  try {
+    let imageUrl = editingSpotId ? editingSpotImageUrl : null;
+    if (imageFile) {
+      btn.textContent = '画像をアップロード中...';
+      try {
+        imageUrl = await uploadSpotImage(imageFile);
+      } catch (uploadErr) {
+        console.error('spot image upload error:', uploadErr.code, uploadErr.message);
+        errEl.textContent = uploadErr.message && uploadErr.message.includes('タイムアウト')
+          ? uploadErr.message
+          : '画像のアップロードに失敗しました。絵文字に切り替えるか、もう一度お試しください。';
+        return;
+      }
+      btn.textContent = originalBtnText;
+    }
+    const data = { name, cat, desc, address, lat, lng, hours, phone, rating, icon, imageUrl };
+    if (editingSpotId) {
+      await db.collection('spots').doc(editingSpotId).update(data);
+      showToast('スポットを更新しました');
+    } else {
+      await db.collection('spots').add(data);
+      showToast('スポットを追加しました');
+    }
+    closeSpotEditModal();
+  } catch (err) {
+    console.error('spot create/update error:', err.code, err.message);
+    errEl.textContent = (editingSpotId ? '更新' : '追加') + 'に失敗しました。もう一度お試しください。';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalBtnText;
+  }
 }
