@@ -839,6 +839,15 @@ body {
 .map-info-rating { font-size: 12px; color: var(--terra-dark); font-weight: 700; margin-top: 4px; }
 
 .spots-list { padding: 16px; }
+.spots-source-note {
+  margin: -2px 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--forest-pale);
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 600;
+}
 .spot-card {
   background: var(--color-surface);
   -webkit-backdrop-filter: blur(var(--blur-glass));
@@ -866,6 +875,65 @@ body {
 .spot-name { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
 .spot-desc { font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
 .spot-rating { font-size: 12px; color: var(--terra-dark); font-weight: 700; margin-top: 4px; }
+.spot-photo-credit {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  max-width: calc(100% - 16px);
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: rgba(0,0,0,0.58);
+  color: #fff;
+  font-size: 9px;
+}
+.spot-photo-credit a { color: #fff; }
+.spot-status {
+  display: inline-flex;
+  margin: 8px 0 2px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #E8F5E9;
+  color: #236B3B;
+  font-size: 12px;
+  font-weight: 700;
+}
+.spot-status.is-closed { background: #FDECEA; color: #9D2C26; }
+.spot-recommend-box {
+  margin: 18px 0;
+  padding: 15px 16px;
+  border: 1px solid rgba(192,96,48,0.24);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FFF9F4, #FFF3E8);
+}
+.spot-recommend-title { color: var(--terra-dark); font-size: 14px; font-weight: 800; }
+.spot-recommend-box ul { margin: 9px 0 0; padding-left: 19px; }
+.spot-recommend-box li { margin-top: 5px; color: var(--ink); font-size: 13px; line-height: 1.5; }
+.spot-rating-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--forest-pale);
+}
+.spot-rating-score { color: var(--terra-dark); font-size: 23px; font-weight: 800; white-space: nowrap; }
+.spot-rating-count { color: var(--ink); font-size: 13px; font-weight: 700; }
+.spot-rating-note { margin-top: 2px; color: var(--ink-soft); font-size: 10px; }
+.spot-hours-list { margin-top: 5px; color: var(--ink); font-size: 12px; line-height: 1.65; }
+.spot-detail-actions { display: flex; gap: 8px; margin: 17px 0 10px; }
+.spot-action-btn {
+  flex: 1;
+  padding: 11px 8px;
+  border-radius: 10px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+.spot-action-btn.primary { background: var(--forest); color: #fff; }
+.spot-action-btn.secondary { border: 1px solid var(--forest); background: #fff; color: var(--forest); }
+.spot-data-note { margin: 15px 0 6px; color: var(--ink-soft); font-size: 10px; line-height: 1.55; }
 
 /* ── NEWS SCREEN ── */
 #news .news-list { padding: 16px; }

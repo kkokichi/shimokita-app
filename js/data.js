@@ -56,8 +56,9 @@ const SEED_SPOTS = [
   { id:'k6', name:'YOUNG', cat:'カレー', lat:35.6597129, lng:139.66379, address:'東京都世田谷区代田5-1-16 1F', desc:'西口徒歩5分。牛骨・鶏ガラのフォンドボーをベースにした欧風カレー。', icon:'🍛' },
 ];
 
-// spots: Firestoreの`spots`コレクションから読み込む可変配列（js/map.jsのinitSpotsListenerが更新する）
-let spots = [];
+// Google Places / Firestoreが取得できない場合でも空表示にしないため、
+// 初期状態はシードデータのコピーにする。js/map.jsが取得結果を統合する。
+let spots = SEED_SPOTS.map(spot => ({ ...spot }));
 
 const news = [
   { id:'1', title:'BONUS TRACK リニューアルオープン！新テナント情報', date:'2026年6月28日', category:'まちニュース', summary:'下北沢の人気スポットBONUS TRACKが一部リニューアル。新たに3店舗が加わり、さらに充実した空間に。', emoji:'🏗️' },

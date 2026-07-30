@@ -2,6 +2,169 @@
 let gmap = null;
 let gmMarkers = [];
 let mapMode = 'spots'; // 'spots' | 'presence'
+let firestoreSpots = [];
+const googleSpotsByCategory = {};
+const googlePlacesState = {}; // category -> 'loading' | 'loaded' | 'error'
+const SHIMOKITA_CENTER = { lat: 35.6618, lng: 139.6663 };
+const GOOGLE_PLACE_QUERIES = {
+  'カフェ': '下北沢 カフェ',
+  '古着': '下北沢 古着屋',
+  'サウナ': '下北沢 サウナ 銭湯',
+  'ライブハウス': '下北沢 ライブハウス',
+  'カレー': '下北沢 カレー',
+};
+
+function safeSpotUrl(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value, window.location.href);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function distanceFromShimokitazawa(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const toRad = value => value * Math.PI / 180;
+  const earthRadius = 6371000;
+  const dLat = toRad(lat - SHIMOKITA_CENTER.lat);
+  const dLng = toRad(lng - SHIMOKITA_CENTER.lng);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(SHIMOKITA_CENTER.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) ** 2;
+  return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatSpotPriceLevel(priceLevel) {
+  if (!priceLevel) return null;
+  const key = String(priceLevel).replace(/[^a-z]/gi, '').toLowerCase();
+  return {
+    free: '無料',
+    inexpensive: '¥ 手頃',
+    moderate: '¥¥ 標準的',
+    expensive: '¥¥¥ 高め',
+    veryexpensive: '¥¥¥¥ 高価格帯',
+  }[key] || null;
+}
+
+function formatBusinessStatus(status) {
+  return {
+    OPERATIONAL: '通常営業として登録',
+    CLOSED_TEMPORARILY: '一時休業中',
+    CLOSED_PERMANENTLY: '閉業',
+  }[String(status || '').toUpperCase()] || null;
+}
+
+function buildSpotHighlights(spot) {
+  const highlights = [];
+  if (spot.source === 'google' && spot.googleRank) {
+    highlights.push(`Google検索「${spot.cat}」の上位${spot.googleRank}件目`);
+  }
+  const rating = Number(spot.rating);
+  if (rating >= 4.7 && spot.ratingCount >= 50) {
+    highlights.push(`高評価 ${rating.toFixed(1)}／口コミ${spot.ratingCount.toLocaleString()}件`);
+  } else if (spot.ratingCount >= 300) {
+    highlights.push(`口コミ${spot.ratingCount.toLocaleString()}件以上で比較しやすい`);
+  }
+  if (spot.walkMinutes) highlights.push(`下北沢駅から徒歩約${spot.walkMinutes}分の目安`);
+  if (spot.hoursList?.length) highlights.push('曜日別の営業時間を確認できる');
+  return highlights.slice(0, 4);
+}
+
+function rebuildSpots() {
+  const googleCategories = new Set(Object.keys(googleSpotsByCategory));
+  const merged = [
+    ...Object.values(googleSpotsByCategory).flat(),
+    ...SEED_SPOTS.filter(spot => !googleCategories.has(spot.cat)).map(spot => ({ ...spot })),
+  ];
+  const seen = new Set(merged.map(spot => `${spot.cat}:${spot.name}`.toLowerCase()));
+  firestoreSpots.forEach(spot => {
+    const key = `${spot.cat}:${spot.name}`.toLowerCase();
+    if (!seen.has(key)) {
+      merged.push(spot);
+      seen.add(key);
+    }
+  });
+  spots = merged;
+}
+
+function googlePlaceToSpot(place, category, index) {
+  const cfg = catConfig[category];
+  const location = place.location;
+  const lat = typeof location?.lat === 'function' ? location.lat() : location?.lat;
+  const lng = typeof location?.lng === 'function' ? location.lng() : location?.lng;
+  const rating = Number.isFinite(place.rating) ? place.rating.toFixed(1) : null;
+  const ratingCount = Number.isFinite(place.userRatingCount) ? place.userRatingCount : null;
+  const distanceMeters = distanceFromShimokitazawa(lat, lng);
+  const firstPhoto = place.photos?.[0] || null;
+  const photoAttributions = (firstPhoto?.authorAttributions || [])
+    .map(author => ({ name: author.displayName || '', url: safeSpotUrl(author.uri) }))
+    .filter(author => author.name);
+  const spot = {
+    id: `google-${place.id || `${category}-${index}`}`,
+    googlePlaceId: place.id || null,
+    googleMapsUrl: safeSpotUrl(place.googleMapsURI),
+    source: 'google',
+    googleRank: index + 1,
+    name: place.displayName || GOOGLE_PLACE_QUERIES[category],
+    cat: category,
+    lat,
+    lng,
+    address: place.formattedAddress || '下北沢エリア',
+    desc: ratingCount
+      ? `Googleマップで評価${rating || '-'}・口コミ${ratingCount.toLocaleString()}件`
+      : `Googleマップで上位の${category}スポット`,
+    rating,
+    ratingCount,
+    distanceMeters,
+    walkMinutes: distanceMeters == null ? null : Math.max(1, Math.round(distanceMeters / 75)),
+    businessStatus: formatBusinessStatus(place.businessStatus),
+    hoursList: place.currentOpeningHours?.weekdayDescriptions || [],
+    phone: place.nationalPhoneNumber || null,
+    websiteUrl: safeSpotUrl(place.websiteURI),
+    priceLabel: formatSpotPriceLevel(place.priceLevel),
+    placeType: place.primaryTypeDisplayName || null,
+    imageUrl: firstPhoto ? safeSpotUrl(firstPhoto.getURI({ maxWidth: 900, maxHeight: 600 })) : null,
+    photoAttributions,
+    icon: cfg.icon,
+  };
+  spot.highlights = buildSpotHighlights(spot);
+  return spot;
+}
+
+async function loadGooglePlacesForCategory(category) {
+  if (!gmap || googlePlacesState[category] === 'loading' || googlePlacesState[category] === 'loaded') return;
+  googlePlacesState[category] = 'loading';
+  renderSpotsList();
+  try {
+    const { Place, SearchByTextRankPreference } = await google.maps.importLibrary('places');
+    const { places } = await Place.searchByText({
+      textQuery: GOOGLE_PLACE_QUERIES[category],
+      fields: [
+        'id', 'displayName', 'location', 'formattedAddress', 'rating', 'userRatingCount',
+        'googleMapsURI', 'businessStatus', 'currentOpeningHours', 'nationalPhoneNumber',
+        'websiteURI', 'priceLevel', 'photos', 'primaryTypeDisplayName',
+      ],
+      locationBias: { center: SHIMOKITA_CENTER, radius: 1800 },
+      language: 'ja',
+      region: 'JP',
+      maxResultCount: 8,
+      rankPreference: SearchByTextRankPreference.RELEVANCE,
+    });
+    const googleSpots = (places || [])
+      .map((place, index) => googlePlaceToSpot(place, category, index))
+      .filter(spot => Number.isFinite(spot.lat) && Number.isFinite(spot.lng));
+    if (googleSpots.length === 0) throw new Error('Google Places returned no results');
+    googleSpotsByCategory[category] = googleSpots;
+    googlePlacesState[category] = 'loaded';
+    rebuildSpots();
+  } catch (err) {
+    googlePlacesState[category] = 'error';
+    console.warn(`Google Places fetch failed (${category}); using fallback spots:`, err.message);
+    rebuildSpots();
+  }
+  renderMap();
+}
 
 // ── FIRESTORE MIGRATION（一度だけ・冪等） ──
 // 本番実行は手動トリガーのみ（index.htmlのinitスクリプトからは呼び出さない）。
@@ -23,15 +186,22 @@ async function migrateSeedSpotsOnce() {
 // ── LIVE LISTENER ──
 function initSpotsListener() {
   db.collection('spots').onSnapshot(snapshot => {
-    spots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    firestoreSpots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    rebuildSpots();
     renderMap();
     if (typeof renderOrganizerSpotManagement === 'function') renderOrganizerSpotManagement();
-  }, err => console.error('spots onSnapshot error:', err.code, err.message));
+  }, err => {
+    // デプロイ済みルールが古い等でFirestoreを読めなくても、
+    // Google Placesまたはシードデータを維持する。
+    console.warn('spots onSnapshot unavailable; using Google/fallback spots:', err.code, err.message);
+    rebuildSpots();
+    renderMap();
+  });
 }
 
 function initMap() {
   gmap = new google.maps.Map(document.getElementById('gmap-div'), {
-    center: { lat: 35.6618, lng: 139.6663 },
+    center: SHIMOKITA_CENTER,
     zoom: 16,
     disableDefaultUI: true,
     zoomControl: true,
@@ -50,6 +220,7 @@ function initMap() {
     title: '下北沢駅',
   });
   renderMarkers();
+  loadGooglePlacesForCategory(activeCategory);
   // マップタブが既に表示中なら即リサイズ
   if (currentScreen === 'map') {
     setTimeout(() => google.maps.event.trigger(gmap, 'resize'), 50);
@@ -71,6 +242,7 @@ function switchCategory(cat) {
   activeCategory = cat;
   document.getElementById('map-info').style.display = 'none';
   renderMap();
+  loadGooglePlacesForCategory(cat);
 }
 
 function switchMapMode(mode) {
@@ -140,19 +312,28 @@ function showSpotInfo(id) {
   const cfg = catConfig[activeCategory];
   const card = document.getElementById('map-info');
   card.style.display = 'block';
-  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="showSpotDetail('${s.id}')"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${s.icon}</div><div style="flex:1;min-width:0"><div class="map-info-name">${s.name}</div><div class="map-info-desc">${s.desc}</div>${s.rating ? `<div class="map-info-rating">★ ${s.rating}</div>` : ''}</div><div onclick="event.stopPropagation();document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
+  card.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer" onclick="showSpotDetail('${escapeHtml(s.id)}')"><div style="width:42px;height:42px;border-radius:10px;background:${cfg.bg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${escapeHtml(s.icon)}</div><div style="flex:1;min-width:0"><div class="map-info-name">${escapeHtml(s.name)}</div><div class="map-info-desc">${escapeHtml(s.desc)}</div>${s.rating ? `<div class="map-info-rating">★ ${escapeHtml(s.rating)}${s.ratingCount ? ` (${escapeHtml(s.ratingCount.toLocaleString())}件)` : ''}</div>` : ''}</div><div onclick="event.stopPropagation();document.getElementById('map-info').style.display='none'" style="color:var(--ink-soft);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0">×</div></div>`;
   if (gmap) gmap.panTo({ lat: s.lat, lng: s.lng });
 }
 
 function renderSpotsList() {
   const cfg = catConfig[activeCategory];
   const filtered = spots.filter(s => s.cat === activeCategory);
+  const state = googlePlacesState[activeCategory];
+  const sourceNote = state === 'loading'
+    ? '<div class="spots-source-note">Googleマップの上位スポットを読み込み中...</div>'
+    : state === 'loaded'
+      ? '<div class="spots-source-note">📍 Googleマップの関連度順</div>'
+      : state === 'error'
+        ? '<div class="spots-source-note">Googleの取得に失敗したため、登録済みスポットを表示中</div>'
+        : '';
   document.getElementById('spots-list').innerHTML = `
     <div style="padding:0 0 8px"><div class="section-title">${activeCategory} 一覧</div></div>
+    ${sourceNote}
     ${filtered.map(s => `
     <div class="spot-card" onclick="showSpotDetail('${s.id}')">
       <div class="spot-icon" style="background:${cfg.bg};overflow:hidden">${s.imageUrl ? `<img src="${s.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : s.icon}</div>
-      <div style="flex:1;min-width:0"><div class="spot-name">${escapeHtml(s.name)}</div><div class="spot-desc">${escapeHtml(s.desc)}</div>${s.rating ? `<div class="spot-rating">★ ${escapeHtml(s.rating)}</div>` : ''}</div>
+      <div style="flex:1;min-width:0"><div class="spot-name">${escapeHtml(s.name)}</div><div class="spot-desc">${escapeHtml(s.desc)}</div>${s.rating ? `<div class="spot-rating">★ ${escapeHtml(s.rating)}${s.ratingCount ? ` (${escapeHtml(s.ratingCount.toLocaleString())}件)` : ''}</div>` : ''}</div>
       <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" onclick="event.stopPropagation();toggleFavoriteSpot('${s.id}', this)">♡</button>
     </div>`).join('')}
   `;
@@ -171,33 +352,54 @@ function showSpotDetail(id) {
 
 function renderSpotDetail(s) {
   const cfg = catConfig[s.cat];
-  const mapUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address);
+  const mapUrl = safeSpotUrl(s.googleMapsUrl) || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address));
+  const websiteUrl = safeSpotUrl(s.websiteUrl);
+  const highlights = s.highlights?.length ? s.highlights : buildSpotHighlights(s);
+  const phoneHref = s.phone ? `tel:${String(s.phone).replace(/[^+\d]/g, '')}` : '';
   document.getElementById('spot-detail-content').innerHTML = `
     <div class="detail-banner" style="background:${cfg.bg}">
-      ${s.imageUrl ? `<img src="${s.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : `<div class="detail-banner-emoji">${s.icon}</div>`}
+      ${s.imageUrl ? `<img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.name)}" style="width:100%;height:100%;object-fit:cover">` : `<div class="detail-banner-emoji">${escapeHtml(s.icon)}</div>`}
+      ${s.photoAttributions?.length ? `<div class="spot-photo-credit">写真: ${s.photoAttributions.map(author => author.url ? `<a href="${escapeHtml(author.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(author.name)}</a>` : escapeHtml(author.name)).join(', ')}</div>` : ''}
     </div>
     <div class="detail-body">
       <div class="detail-category" style="display:flex;align-items:center;justify-content:space-between">
-        <span class="pill" style="background:${cfg.bg};color:${cfg.color}">${escapeHtml(s.cat)}</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill" style="background:${cfg.bg};color:${cfg.color}">${escapeHtml(s.cat)}</span>${s.placeType ? `<span class="pill pill-green">${escapeHtml(s.placeType)}</span>` : ''}</div>
         <button class="icon-toggle-btn ${isSpotFavorite(s.id) ? 'active' : ''}" style="font-size:26px" onclick="toggleFavoriteSpot('${s.id}', this)">♡</button>
       </div>
       <div class="detail-title">${escapeHtml(s.name)}</div>
+      ${s.businessStatus ? `<div class="spot-status ${String(s.businessStatus).includes('休業') || String(s.businessStatus).includes('閉業') ? 'is-closed' : ''}">${escapeHtml(s.businessStatus)}</div>` : ''}
+      ${highlights.length ? `
+      <section class="spot-recommend-box">
+        <div class="spot-recommend-title">✨ おすすめポイント</div>
+        <ul>${highlights.map(point => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
+      </section>` : ''}
+      ${s.rating ? `<div class="spot-rating-summary">
+        <div class="spot-rating-score">★ ${escapeHtml(s.rating)}</div>
+        <div><div class="spot-rating-count">Googleマップの口コミ ${s.ratingCount ? escapeHtml(s.ratingCount.toLocaleString()) : '0'}件</div><div class="spot-rating-note">口コミ数もお店選びの目安に</div></div>
+      </div>` : ''}
       <div class="detail-info-row">
         <div class="detail-info-icon">📍</div>
-        <div><div class="detail-info-label">住所</div><div class="detail-info-value">${escapeHtml(s.address)}</div></div>
+        <div><div class="detail-info-label">住所${s.walkMinutes ? `（下北沢駅から徒歩約${escapeHtml(s.walkMinutes)}分）` : ''}</div><div class="detail-info-value">${escapeHtml(s.address)}</div></div>
       </div>
-      ${s.hours ? `<div class="detail-info-row">
+      ${s.hoursList?.length ? `<div class="detail-info-row spot-hours-row">
+        <div class="detail-info-icon">🕒</div>
+        <div style="flex:1"><div class="detail-info-label">営業時間（祝日等は変更の場合あり）</div><div class="spot-hours-list">${s.hoursList.map(line => `<div>${escapeHtml(line)}</div>`).join('')}</div></div>
+      </div>` : s.hours ? `<div class="detail-info-row">
         <div class="detail-info-icon">🕒</div>
         <div><div class="detail-info-label">営業時間</div><div class="detail-info-value">${escapeHtml(s.hours)}</div></div>
       </div>` : ''}
       ${s.phone ? `<div class="detail-info-row">
         <div class="detail-info-icon">📞</div>
-        <div><div class="detail-info-label">電話番号</div><div class="detail-info-value">${escapeHtml(s.phone)}</div></div>
+        <div><div class="detail-info-label">電話番号</div><div class="detail-info-value"><a href="${escapeHtml(phoneHref)}">${escapeHtml(s.phone)}</a></div></div>
       </div>` : ''}
-      ${s.rating ? `<div class="detail-info-row">
-        <div class="detail-info-icon">★</div>
-        <div><div class="detail-info-label">評価</div><div class="detail-info-value">${escapeHtml(s.rating)}</div></div>
+      ${s.priceLabel ? `<div class="detail-info-row">
+        <div class="detail-info-icon">💰</div>
+        <div><div class="detail-info-label">価格帯の目安</div><div class="detail-info-value">${escapeHtml(s.priceLabel)}</div></div>
       </div>` : ''}
+      <div class="spot-detail-actions">
+        ${websiteUrl ? `<a class="spot-action-btn secondary" href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener noreferrer">🌐 公式サイト</a>` : ''}
+        <a class="spot-action-btn primary" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">🗺 Googleマップ</a>
+      </div>
       <a class="detail-map-placeholder" href="${mapUrl}" target="_blank" rel="noopener" style="text-decoration:none">
         <div class="detail-map-icon">🗺</div>
         <div class="detail-map-text">Google マップで開く</div>
@@ -205,6 +407,7 @@ function renderSpotDetail(s) {
       </a>
       <div class="detail-desc-label">お店について</div>
       <div class="detail-desc">${escapeHtml(s.desc)}</div>
+      ${s.source === 'google' ? '<div class="spot-data-note">※ 情報はGoogleマップ掲載データです。来店前に最新の営業情報を店舗へご確認ください。</div>' : ''}
     </div>
   `;
 }
