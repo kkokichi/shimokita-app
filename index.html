@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>shimokita — 下北沢コミュニティ</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=20260730c">
+<link rel="preload" as="image" href="assets/shimokun.png">
 <script src="js/theme.js"></script>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1C3A2F">
@@ -22,12 +23,30 @@
     <!-- HOME -->
     <div class="screen active" id="home">
       <div class="hero">
-        <div class="hero-eyebrow">🌿 下北沢コミュニティ</div>
-        <div class="hero-title">街が、<span>舞台</span>。<br>人が、主役。</div>
-        <div class="hero-desc">下北沢で開催されるイベントを通じて、あなたと街をつなぐ場所。</div>
+        <div class="hero-brand-row">
+          <div class="hero-brand"><span class="hero-brand-mark">S</span><span>shimokita</span></div>
+          <div class="hero-now"><span class="hero-now-dot"></span>街のいまを案内中</div>
+        </div>
+        <div class="hero-stage">
+          <div class="hero-copy">
+            <div class="hero-eyebrow">しもくんの今日のひとこと</div>
+            <h1 class="hero-title" id="hero-title">街が、<span>舞台</span>。<br>人が、主役。</h1>
+            <p class="hero-desc" id="hero-desc">下北沢で開催されるイベントを通じて、あなたと街をつなぐ場所。</p>
+          </div>
+          <div class="hero-mascot-wrap" aria-hidden="true">
+            <span class="hero-mascot-halo"></span>
+            <img class="hero-mascot" src="assets/shimokun.png" alt="" width="1086" height="1448" loading="eager" fetchpriority="high">
+            <span class="hero-mascot-name">しもくん</span>
+          </div>
+        </div>
         <div class="hero-actions">
-          <button class="btn-primary" onclick="navigate('events')">🎉 イベントを見る</button>
-          <button class="btn-secondary" onclick="navigate('map')">🗺 マップ</button>
+          <button class="btn-primary" onclick="navigate('events')"><span aria-hidden="true">✦</span> 今日を見つける</button>
+          <button class="btn-secondary" onclick="navigate('map')"><span aria-hidden="true">⌖</span> 街を歩く</button>
+        </div>
+        <div class="hero-context" aria-label="下北沢の現在の情報">
+          <span>📍 下北沢</span>
+          <span class="hero-context-divider"></span>
+          <span id="hero-event-count">イベントをチェック</span>
         </div>
       </div>
 
@@ -53,9 +72,9 @@
       </div>
 
       <div class="today-strip">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:20px;">
+        <div class="home-section-heading home-section-heading-first">
           <div class="section-title" style="margin:0">今日のピックアップ</div>
-          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('events')">すべて見る →</div>
+          <button class="home-section-link" onclick="navigate('events')">すべて見る <span aria-hidden="true">→</span></button>
         </div>
         <div class="today-card" onclick="showDetail('3')">
           <div class="today-emoji">🎯</div>
@@ -76,17 +95,17 @@
       </div>
 
       <div class="home-section">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="home-section-heading">
           <div class="section-title" style="margin:0">新着イベント</div>
-          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('events')">すべて見る →</div>
+          <button class="home-section-link" onclick="navigate('events')">すべて見る <span aria-hidden="true">→</span></button>
         </div>
         <div id="home-events"></div>
       </div>
 
       <div class="home-section" style="margin-bottom:8px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="home-section-heading">
           <div class="section-title" style="margin:0">下北沢ニュース</div>
-          <div style="font-size:12px;color:var(--forest);font-weight:600;cursor:pointer" onclick="navigate('news')">すべて見る →</div>
+          <button class="home-section-link" onclick="navigate('news')">すべて見る <span aria-hidden="true">→</span></button>
         </div>
         <div class="news-scroll" id="home-news"></div>
       </div>
@@ -548,7 +567,7 @@
   </div>
 
   <!-- BOTTOM NAV -->
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" aria-label="メインメニュー">
     <button class="nav-item active" id="nav-home" onclick="navigate('home')">
       <span class="nav-icon">🏠</span>
       <span class="nav-label">ホーム</span>
@@ -724,10 +743,10 @@
 <script src="js/data.js"></script>
 <script src="js/moderation.js"></script>
 <script src="js/core.js"></script>
-<script src="js/home.js"></script>
+<script src="js/home.js?v=20260730b"></script>
 <script src="js/events.js"></script>
 <script src="js/news.js"></script>
-<script src="js/map.js"></script>
+<script src="js/map.js?v=20260730c"></script>
 <script src="js/auth.js"></script>
 <script src="js/timeline.js"></script>
 <script src="js/organizer.js"></script>

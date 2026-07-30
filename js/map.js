@@ -3,6 +3,7 @@ let gmap = null;
 let gmMarkers = [];
 let mapMode = 'spots'; // 'spots' | 'presence'
 let firestoreSpots = [];
+let activeSpotDetailId = null;
 const googleSpotsByCategory = {};
 const googlePlacesState = {}; // category -> 'loading' | 'loaded' | 'error'
 const SHIMOKITA_CENTER = { lat: 35.6618, lng: 139.6663 };
@@ -69,6 +70,119 @@ function buildSpotHighlights(spot) {
   if (spot.walkMinutes) highlights.push(`下北沢駅から徒歩約${spot.walkMinutes}分の目安`);
   if (spot.hoursList?.length) highlights.push('曜日別の営業時間を確認できる');
   return highlights.slice(0, 4);
+}
+
+const REVIEW_INSIGHT_RULES = [
+  {
+    label: '味・メニュー',
+    message: '料理やドリンクのおいしさを評価する声が目立ちます',
+    keywords: ['美味', 'おいし', '旨い', '味', 'コーヒー', '珈琲', 'ラテ', 'カレー', 'スパイス', '料理', 'メニュー', 'ドリンク', '豆'],
+  },
+  {
+    label: '居心地のよさ',
+    message: '落ち着ける雰囲気や心地よい空間づくりが好評です',
+    keywords: ['雰囲気', '居心地', '落ち着', 'おしゃれ', 'オシャレ', '内装', '空間', '静か', 'ゆっくり', 'リラックス'],
+  },
+  {
+    label: 'スタッフの対応',
+    message: '親切で丁寧な接客を評価する声があります',
+    keywords: ['店員', 'スタッフ', '接客', '親切', '丁寧', '対応', 'サービス'],
+  },
+  {
+    label: 'ひとり時間',
+    message: 'ひとりでも過ごしやすく、作業や読書にも向くという声があります',
+    keywords: ['一人', 'ひとり', '1人', '作業', '読書', '勉強', '長居', '静か'],
+  },
+  {
+    label: '価格と満足感',
+    message: '価格に対する満足感やボリュームを評価する声があります',
+    keywords: ['コスパ', 'リーズナブル', '安い', '価格', '値段', 'ボリューム', 'お得'],
+  },
+  {
+    label: '駅からの行きやすさ',
+    message: '駅から立ち寄りやすい立地を評価する声があります',
+    keywords: ['駅近', '駅から', 'アクセス', '立地', '徒歩'],
+  },
+  {
+    label: 'サウナ・設備',
+    message: 'サウナや水風呂など、設備の満足度を評価する声があります',
+    keywords: ['サウナ', '水風呂', 'ロウリュ', '外気浴', 'ととの', '浴室', '温度', '風呂'],
+  },
+  {
+    label: '品ぞろえ',
+    message: '商品のセレクトや見つける楽しさを評価する声があります',
+    keywords: ['品揃え', '品ぞろえ', '古着', 'セレクト', '商品', '掘り出し', '一点物'],
+  },
+  {
+    label: 'ライブ体験',
+    message: '音響やステージとの距離感を評価する声があります',
+    keywords: ['音響', 'ライブ', '演奏', 'ステージ', '距離感', '音楽', '見やすい'],
+  },
+  {
+    label: 'また行きたい',
+    message: '再訪したい、おすすめしたいという声があります',
+    keywords: ['また行き', 'また来', 'リピート', '再訪', 'おすすめ', 'オススメ', 'お気に入り'],
+  },
+];
+
+function normalizeSpotReview(review) {
+  const author = review.authorAttribution || {};
+  const text = String(review.text || review.originalText || '').trim();
+  return {
+    text,
+    rating: Number.isFinite(review.rating) ? review.rating : null,
+    relativeTime: review.relativePublishTimeDescription || '',
+    googleMapsUrl: safeSpotUrl(review.googleMapsURI),
+    authorName: author.displayName || 'Googleマップユーザー',
+    authorUrl: safeSpotUrl(author.uri),
+    authorPhotoUrl: safeSpotUrl(author.photoURI || author.photoUri),
+  };
+}
+
+function extractReviewInsights(reviews) {
+  const positiveReviews = reviews.filter(review => review.text && (review.rating == null || review.rating >= 4));
+  return REVIEW_INSIGHT_RULES.map((rule, order) => {
+    const matchedReviews = positiveReviews.filter(review => rule.keywords.some(keyword => review.text.includes(keyword)));
+    return {
+      label: rule.label,
+      message: rule.message,
+      mentions: matchedReviews.length,
+      order,
+    };
+  })
+    .filter(insight => insight.mentions > 0)
+    .sort((a, b) => b.mentions - a.mentions || a.order - b.order)
+    .slice(0, 3);
+}
+
+function truncateReviewText(text, maxLength = 110) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}…` : normalized;
+}
+
+async function ensureSpotReviews(spot) {
+  if (spot.source !== 'google' || !spot.googlePlaceId || spot.reviewsLoaded || spot.reviewLoading) return;
+  spot.reviewLoading = true;
+  spot.reviewError = false;
+  if (currentScreen === 'spot-detail' && activeSpotDetailId === spot.id) renderSpotDetail(spot);
+  try {
+    const { Place } = await google.maps.importLibrary('places');
+    const reviewPlace = new Place({ id: spot.googlePlaceId });
+    await reviewPlace.fetchFields({ fields: ['reviews'] });
+    spot.reviews = (reviewPlace.reviews || [])
+      .map(normalizeSpotReview)
+      .filter(review => review.text)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    spot.reviewInsights = extractReviewInsights(spot.reviews);
+    spot.placeAttributions = Array.from(reviewPlace.attributions || []).map(String).filter(Boolean);
+    spot.reviewsLoaded = true;
+  } catch (err) {
+    spot.reviewError = true;
+    console.warn(`Google Places reviews fetch failed (${spot.name}):`, err.message);
+  } finally {
+    spot.reviewLoading = false;
+    if (currentScreen === 'spot-detail' && activeSpotDetailId === spot.id) renderSpotDetail(spot);
+  }
 }
 
 function rebuildSpots() {
@@ -342,12 +456,21 @@ function renderSpotsList() {
 function showSpotDetail(id) {
   const s = spots.find(sp => sp.id === id);
   if (!s) return;
-  renderSpotDetail(s);
+  activeSpotDetailId = s.id;
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.getElementById('spot-detail').classList.add('active');
   document.getElementById('spot-detail').scrollTop = 0;
   prevScreen = currentScreen;
   currentScreen = 'spot-detail';
+  renderSpotDetail(s);
+  ensureSpotReviews(s);
+}
+
+function retrySpotReviews(id) {
+  const spot = spots.find(item => item.id === id);
+  if (!spot) return;
+  spot.reviewError = false;
+  ensureSpotReviews(spot);
 }
 
 function renderSpotDetail(s) {
@@ -355,7 +478,64 @@ function renderSpotDetail(s) {
   const mapUrl = safeSpotUrl(s.googleMapsUrl) || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.name + ' ' + s.address));
   const websiteUrl = safeSpotUrl(s.websiteUrl);
   const highlights = s.highlights?.length ? s.highlights : buildSpotHighlights(s);
+  const reviewInsights = s.reviewInsights || [];
+  const displayedReviews = (s.reviews || [])
+    .filter(review => review.text && (review.rating == null || review.rating >= 4))
+    .slice(0, 2);
   const phoneHref = s.phone ? `tel:${String(s.phone).replace(/[^+\d]/g, '')}` : '';
+  const recommendSection = s.reviewLoading ? `
+      <section class="spot-recommend-box is-loading" aria-live="polite">
+        <div class="spot-recommend-title">💬 口コミから魅力を分析中</div>
+        <div class="spot-review-loading"><span></span><span></span><span></span></div>
+      </section>` : reviewInsights.length ? `
+      <section class="spot-recommend-box from-reviews">
+        <div class="spot-recommend-kicker">Googleマップの口コミから抽出</div>
+        <div class="spot-recommend-title">✨ ここに行きたくなるポイント</div>
+        <div class="spot-review-insights">${reviewInsights.map(insight => `
+          <div class="spot-review-insight">
+            <div class="spot-review-insight-icon">✓</div>
+            <div><strong>${escapeHtml(insight.label)}</strong><span>${escapeHtml(insight.message)}</span><small>高評価口コミ ${escapeHtml(insight.mentions)}件で言及</small></div>
+          </div>`).join('')}
+        </div>
+      </section>` : s.reviewError ? `
+      <section class="spot-recommend-box review-unavailable">
+        <div class="spot-recommend-title">おすすめポイント</div>
+        <p>口コミの読み込みに失敗しました。</p>
+        <button onclick="retrySpotReviews('${escapeHtml(s.id)}')">もう一度読み込む</button>
+      </section>` : highlights.length ? `
+      <section class="spot-recommend-box">
+        <div class="spot-recommend-title">✨ おすすめポイント</div>
+        <ul>${highlights.map(point => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
+      </section>` : '';
+  const factChips = reviewInsights.length && highlights.length ? `
+      <div class="spot-fact-chips" aria-label="来店前に役立つ情報">
+        ${highlights.slice(0, 3).map(point => `<span>${escapeHtml(point)}</span>`).join('')}
+      </div>` : '';
+  const reviewsSection = displayedReviews.length ? `
+      <section class="spot-review-evidence">
+        <div class="spot-review-evidence-head">
+          <div><span>VOICE</span><strong>口コミを少し見る</strong></div>
+          <small>Googleマップより</small>
+        </div>
+        ${displayedReviews.map(review => {
+          const authorContent = review.authorPhotoUrl
+            ? `<img src="${escapeHtml(review.authorPhotoUrl)}" alt="" loading="lazy">`
+            : `<span class="spot-review-avatar-fallback">${escapeHtml(review.authorName.slice(0, 1))}</span>`;
+          const authorName = review.authorUrl
+            ? `<a href="${escapeHtml(review.authorUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(review.authorName)}</a>`
+            : `<span>${escapeHtml(review.authorName)}</span>`;
+          const reviewLink = review.googleMapsUrl
+            ? `<a class="spot-review-source-link" href="${escapeHtml(review.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Googleマップで全文を見る</a>`
+            : '';
+          return `<article class="spot-review-card">
+            <div class="spot-review-author">${authorContent}<div>${authorName}<small>${review.rating ? `★ ${escapeHtml(review.rating)}` : ''}${review.relativeTime ? ` · ${escapeHtml(review.relativeTime)}` : ''}</small></div></div>
+            <p>「${escapeHtml(truncateReviewText(review.text))}」</p>
+            ${reviewLink}
+          </article>`;
+        }).join('')}
+        ${s.placeAttributions?.length ? `<div class="spot-place-attributions">${s.placeAttributions.map(escapeHtml).join(' · ')}</div>` : ''}
+        <div class="spot-review-disclaimer">口コミは個人の感想です。表示された口コミの一部をもとに特徴を整理しています。</div>
+      </section>` : '';
   document.getElementById('spot-detail-content').innerHTML = `
     <div class="detail-banner" style="background:${cfg.bg}">
       ${s.imageUrl ? `<img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.name)}" style="width:100%;height:100%;object-fit:cover">` : `<div class="detail-banner-emoji">${escapeHtml(s.icon)}</div>`}
@@ -368,11 +548,8 @@ function renderSpotDetail(s) {
       </div>
       <div class="detail-title">${escapeHtml(s.name)}</div>
       ${s.businessStatus ? `<div class="spot-status ${String(s.businessStatus).includes('休業') || String(s.businessStatus).includes('閉業') ? 'is-closed' : ''}">${escapeHtml(s.businessStatus)}</div>` : ''}
-      ${highlights.length ? `
-      <section class="spot-recommend-box">
-        <div class="spot-recommend-title">✨ おすすめポイント</div>
-        <ul>${highlights.map(point => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
-      </section>` : ''}
+      ${recommendSection}
+      ${factChips}
       ${s.rating ? `<div class="spot-rating-summary">
         <div class="spot-rating-score">★ ${escapeHtml(s.rating)}</div>
         <div><div class="spot-rating-count">Googleマップの口コミ ${s.ratingCount ? escapeHtml(s.ratingCount.toLocaleString()) : '0'}件</div><div class="spot-rating-note">口コミ数もお店選びの目安に</div></div>
@@ -407,6 +584,7 @@ function renderSpotDetail(s) {
       </a>
       <div class="detail-desc-label">お店について</div>
       <div class="detail-desc">${escapeHtml(s.desc)}</div>
+      ${reviewsSection}
       ${s.source === 'google' ? '<div class="spot-data-note">※ 情報はGoogleマップ掲載データです。来店前に最新の営業情報を店舗へご確認ください。</div>' : ''}
     </div>
   `;

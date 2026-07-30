@@ -5,7 +5,7 @@
 //     （常にネットワークを優先し、オフライン時のみキャッシュにフォールバック。
 //     　リアルタイム性が必要なため、オンライン時は絶対にキャッシュを返さない）
 
-const CACHE_VERSION = 'shimokita-static-v6';
+const CACHE_VERSION = 'shimokita-static-v11';
 
 // 初回インストール時にあらかじめキャッシュしておく既知の静的ファイル一覧。
 // js/配下に新しいファイルを追加した場合はここにも追記すること
@@ -13,15 +13,16 @@ const CACHE_VERSION = 'shimokita-static-v6';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
-  '/css/style.css',
+  '/css/style.css?v=20260730c',
+  '/assets/shimokun.png',
   '/js/firebase-init.js',
   '/js/data.js',
   '/js/moderation.js',
   '/js/core.js',
-  '/js/home.js',
+  '/js/home.js?v=20260730b',
   '/js/events.js',
   '/js/news.js',
-  '/js/map.js',
+  '/js/map.js?v=20260730c',
   '/js/auth.js',
   '/js/timeline.js',
   '/js/organizer.js',
@@ -58,7 +59,8 @@ function isOwnStaticAsset(url) {
     url.pathname === '/manifest.json' ||
     url.pathname.startsWith('/css/') ||
     url.pathname.startsWith('/js/') ||
-    url.pathname.startsWith('/icons/')
+    url.pathname.startsWith('/icons/') ||
+    url.pathname.startsWith('/assets/')
   );
 }
 

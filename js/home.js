@@ -1,5 +1,62 @@
+// ── HOME HERO ──
+const HOME_HERO_MESSAGES = [
+  {
+    title: '街の<span>偶然</span>を、<br>今日の予定に。',
+    description: 'イベントもお店も、いまの気分から。下北沢の新しい入口をしもくんが案内します。',
+  },
+  {
+    title: 'いつもの道に、<br><span>出会い</span>をひとつ。',
+    description: '気になっていた場所へ、今日は一歩だけ。街で見つかる体験を集めました。',
+  },
+  {
+    title: '下北沢を、<br><span>自分の街</span>へ。',
+    description: '好きなお店、音楽、人とのつながり。あなたらしい街の楽しみ方を見つけよう。',
+  },
+  {
+    title: '気になる扉を、<br><span>ひとつ開こう</span>。',
+    description: '今日行けるイベントから話題のお店まで、寄り道したくなる情報をお届けします。',
+  },
+  {
+    title: '<span>好き</span>がつながる、<br>街へ出よう。',
+    description: '同じ興味を持つ人や場所が、すぐ近くに。下北沢で次のきっかけを。',
+  },
+  {
+    title: '寄り道から、<br><span>物語</span>が始まる。',
+    description: '予定どおりじゃない一日もいい。いまの下北沢から行き先を選んでみよう。',
+  },
+];
+
+function selectHomeHeroMessage() {
+  let lastIndex = -1;
+  try {
+    lastIndex = Number.parseInt(localStorage.getItem('shimokitaHeroMessageIndex'), 10);
+  } catch (_) {
+    // ストレージを使えない環境でもコピーの切り替え自体は継続する
+  }
+  const candidates = HOME_HERO_MESSAGES.map((_, index) => index).filter(index => index !== lastIndex);
+  const randomIndex = candidates[Math.floor(Math.random() * candidates.length)] ?? 0;
+  try {
+    localStorage.setItem('shimokitaHeroMessageIndex', String(randomIndex));
+  } catch (_) {
+    // 保存できない場合は今回の表示だけに適用する
+  }
+  return HOME_HERO_MESSAGES[randomIndex];
+}
+
+const selectedHomeHeroMessage = selectHomeHeroMessage();
+
+function renderHomeHero() {
+  const title = document.getElementById('hero-title');
+  const description = document.getElementById('hero-desc');
+  const eventCount = document.getElementById('hero-event-count');
+  if (title) title.innerHTML = selectedHomeHeroMessage.title;
+  if (description) description.textContent = selectedHomeHeroMessage.description;
+  if (eventCount) eventCount.textContent = `今日の候補 ${events.length}件`;
+}
+
 // ── RENDER HOME ──
 function renderHome() {
+  renderHomeHero();
   const homeEvents = document.getElementById('home-events');
   homeEvents.innerHTML = events.slice(0, 4).map(ev => {
     const pct = Math.round((ev.participants / ev.capacity) * 100);
