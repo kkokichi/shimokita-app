@@ -745,7 +745,7 @@
   renderHome();
   renderEvents();
   renderNews();
-  ensureNewsLoaded(); // しもブロのRSSを取得（成功/失敗いずれもrenderNews()/renderHome()を再実行）
+  ensureNewsLoaded(); // 複数の下北沢関連RSSを取得し、新着順に統合
   renderMap(); // タブだけ先に描画
   renderTimeline();
   renderRecommendedEvent();

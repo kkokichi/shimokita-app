@@ -30,11 +30,11 @@ function renderHome() {
       : '<div class="timeline-empty">読み込み中...</div>';
   } else {
     homeNews.innerHTML = news.slice(0, 5).map(n => `
-      <div class="news-card-sm" onclick="showNewsDetail('${n.id}')">
-        <div class="news-card-sm-emoji">${n.imageUrl ? `<img src="${n.imageUrl}" alt="" style="width:100%;height:100%;object-fit:cover">` : n.emoji}</div>
-        <div class="news-card-sm-category">${n.category}</div>
-        <div class="news-card-sm-title">${n.title}</div>
-        <div class="news-card-sm-date">${n.date}</div>
+      <div class="news-card-sm" onclick="showNewsDetail('${escapeNewsHtml(n.id)}')">
+        <div class="news-card-sm-emoji">${n.imageUrl ? `<img src="${escapeNewsHtml(safeNewsUrl(n.imageUrl))}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy">` : escapeNewsHtml(n.emoji)}</div>
+        <div class="news-card-sm-category">${escapeNewsHtml(n.category)}</div>
+        <div class="news-card-sm-title">${escapeNewsHtml(n.title)}</div>
+        <div class="news-card-sm-date">${escapeNewsHtml(n.date)}</div>
       </div>
     `).join('');
   }
