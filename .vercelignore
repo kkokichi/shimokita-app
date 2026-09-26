@@ -1,0 +1,17 @@
+# Webの公開に不要なファイル（iOSビルド・開発用）はVercelに配信しない
+.claude
+ios
+resources
+scripts
+node_modules
+www
+*.md
+codemagic.yaml
+capacitor.config.json
+package.json
+package-lock.json
+firebase.json
+.firebaserc
+firestore.rules
+firestore.indexes.json
+storage.rules
