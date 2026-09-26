@@ -130,7 +130,7 @@ function handleLogout() {
     userProfile = null;
     joinedEvents.clear();
     renderEvents();
-    renderRecommendedEvent();
+    if (typeof renderRecommendedEvent === 'function') renderRecommendedEvent();
     navigate('home');
     showToast('ログアウトしました');
   });
@@ -342,7 +342,7 @@ auth.onAuthStateChanged(user => {
     userProfile = null;
     joinedEvents.clear();
     renderEvents();
-    renderRecommendedEvent();
+    if (typeof renderRecommendedEvent === 'function') renderRecommendedEvent();
     return;
   }
   db.collection('users').doc(user.uid).get().then(doc => {
@@ -362,7 +362,7 @@ auth.onAuthStateChanged(user => {
   db.collection('eventParticipants').where('userId', '==', user.uid).get().then(snapshot => {
     joinedEvents = new Set(snapshot.docs.map(doc => doc.data().eventId));
     renderEvents();
-    renderRecommendedEvent();
+    if (typeof renderRecommendedEvent === 'function') renderRecommendedEvent();
     if (typeof checkReminders === 'function') checkReminders();
   }).catch(err => console.error('eventParticipants fetch error:', err.code, err.message));
 });
