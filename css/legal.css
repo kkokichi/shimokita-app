@@ -1,0 +1,48 @@
+/* プライバシーポリシー・利用規約・サポートページ共通 */
+:root {
+  --legal-bg: #faf8f5;
+  --legal-text: #2b2b2b;
+  --legal-muted: #6b6b6b;
+  --legal-accent: #b5542d;
+  --legal-border: #e6e0d8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --legal-bg: #1b1a19;
+    --legal-text: #ece9e4;
+    --legal-muted: #a8a39c;
+    --legal-accent: #e0875f;
+    --legal-border: #3a3632;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--legal-bg);
+  color: var(--legal-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  line-height: 1.8;
+  -webkit-text-size-adjust: 100%;
+}
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 48px);
+}
+.legal h1 { font-size: 24px; margin: 16px 0 4px; }
+.legal h2 { font-size: 17px; margin: 32px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--legal-border); }
+.legal h3 { font-size: 15px; margin: 20px 0 4px; }
+.legal p, .legal li { font-size: 15px; }
+.legal ul { padding-left: 1.3em; }
+.legal a { color: var(--legal-accent); }
+.legal-date, .legal-note { color: var(--legal-muted); font-size: 13px !important; }
+.legal-back { display: inline-block; padding: 8px 0; text-decoration: none; font-weight: 600; }
+.legal-button {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: var(--legal-accent);
+  color: #fff !important;
+  text-decoration: none;
+  font-weight: 600;
+}

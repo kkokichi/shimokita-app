@@ -22,7 +22,7 @@ function copyRecursive(src, dest) {
 
 const root = path.resolve(__dirname, '..');
 const wwwDir = path.join(root, 'www');
-const assets = ['index.html', 'css', 'js', 'assets'];
+const assets = ['index.html', 'privacy.html', 'terms.html', 'support.html', 'css', 'js', 'assets'];
 
 fs.rmSync(wwwDir, { recursive: true, force: true });
 fs.mkdirSync(wwwDir, { recursive: true });

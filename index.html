@@ -305,7 +305,8 @@
           <label class="auth-label">パスワード</label>
           <input class="auth-input" type="password" id="signup-password" required minlength="6" placeholder="6文字以上">
           <div class="auth-error" id="signup-error"></div>
-          <button class="btn-primary auth-submit" type="submit">登録する</button>
+          <div class="profile-view-label" style="margin-top:6px">登録すると、<a href="terms.html">利用規約</a>と<a href="privacy.html">プライバシーポリシー</a>に同意したものとみなします。</div>
+          <button class="btn-primary auth-submit" type="submit">同意して登録する</button>
         </form>
       </div>
     </div>
@@ -416,6 +417,16 @@
           <div class="menu-label">主催者ダッシュボード</div>
           <div class="menu-arrow">›</div>
         </div>
+        <a class="menu-item" href="terms.html" style="text-decoration:none;color:inherit">
+          <div class="menu-icon">📄</div>
+          <div class="menu-label">利用規約</div>
+          <div class="menu-arrow">›</div>
+        </a>
+        <a class="menu-item" href="privacy.html" style="text-decoration:none;color:inherit">
+          <div class="menu-icon">🔒</div>
+          <div class="menu-label">プライバシーポリシー</div>
+          <div class="menu-arrow">›</div>
+        </a>
         <div class="menu-item" onclick="handleLogout()">
           <div class="menu-icon">🚪</div>
           <div class="menu-label" style="color:var(--terra-dark)">ログアウト</div>
@@ -562,6 +573,15 @@
         <input class="auth-input" type="password" id="account-password-current" required placeholder="確認のため入力してください">
         <div class="auth-error" id="account-password-error"></div>
         <button class="btn-primary auth-submit" type="submit">パスワードを変更</button>
+      </form>
+
+      <form class="auth-body auth-form account-settings-section" id="account-delete-form" onsubmit="handleAccountDelete(event)">
+        <div class="section-title">アカウント削除</div>
+        <div class="profile-view-label">アカウントと、プロフィール・投稿・参加登録・フレンドなどあなたのデータを削除します。削除後は元に戻せません。</div>
+        <label class="auth-label">現在のパスワード</label>
+        <input class="auth-input" type="password" id="account-delete-password" required placeholder="確認のため入力してください">
+        <div class="auth-error" id="account-delete-error"></div>
+        <button class="btn-primary auth-submit" type="submit" style="background:var(--terra-dark)">アカウントを削除</button>
       </form>
     </div>
   </div>

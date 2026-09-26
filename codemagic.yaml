@@ -5,31 +5,27 @@ workflows:
     instance_type: mac_mini_m2
 
     # Codemagic > Team settings > Integrations > App Store Connect で登録した
-    # インテグレーション名に置き換えること。ここにAPIキーそのものは書かない。
+    # インテグレーション名。登録時の名前を「shimokita-asc」にすれば、ここは変更不要。
+    # APIキーそのものはここに書かない（Codemagic側で安全に保管される）。
     integrations:
-      app_store_connect: CHANGE_ME_appstore_integration_name
+      app_store_connect: shimokita-asc
 
     environment:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.shimokita.app
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
-      node: latest
+      node: 22
       xcode: latest
-      cocoapods: default
 
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
+    # mainへのpushのたびに自動でビルド・アップロードしないよう、手動実行のみとする
+    # （Codemagicの画面で「Start new build」を押したときだけ動く）
 
     scripts:
       - name: Install npm dependencies
-        script: npm install
+        script: npm ci
 
       - name: Prepare web assets (index.html/css/js -> www)
         script: npm run build
@@ -37,17 +33,20 @@ workflows:
       - name: Sync Capacitor iOS project
         script: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios/App && pod install
+      # このプロジェクトはCocoaPodsではなくSwift Package Manager（ios/App/CapApp-SPM）を使う
 
       - name: Set up code signing
         script: xcode-project use-profiles
 
+      - name: Increment build number
+        script: |
+          cd ios/App
+          agvtool new-version -all $BUILD_NUMBER
+
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:

@@ -53,7 +53,8 @@ service cloud.firestore {
       allow update: if isOwner(userId) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) &&
         !('email' in request.resource.data);
-      allow delete: if false;
+      // アカウント削除機能（App Store審査で必須）のため本人のみ削除可
+      allow delete: if isOwner(userId);
     }
 
     // events: 誰でも閲覧可、organizerロールのみ作成・更新・削除可。

@@ -238,6 +238,8 @@ function openAccountSettingsScreen() {
   document.getElementById('account-password-new').value = '';
   document.getElementById('account-password-current').value = '';
   document.getElementById('account-password-error').textContent = '';
+  document.getElementById('account-delete-password').value = '';
+  document.getElementById('account-delete-error').textContent = '';
   navigate('account-settings');
 }
 
@@ -326,6 +328,80 @@ async function handleAccountPasswordChange(e) {
     document.getElementById('account-password-new').value = '';
     document.getElementById('account-password-current').value = '';
     showToast('パスワードを変更しました');
+  } catch (err) {
+    errEl.textContent = authErrorMessage(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── アカウント削除（App Store審査ガイドライン5.1.1(v)でアプリ内からの削除が必須） ──
+// 本人が作成したデータを削除してから、最後にAuthのアカウント自体を削除する。
+// 個々のデータ削除に失敗しても、アカウント削除そのものは止めない
+async function deleteMyDocs(query) {
+  const snap = await query.get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
+async function deleteMyEventParticipations(uid) {
+  const snap = await db.collection('eventParticipants').where('userId', '==', uid).get();
+  for (const doc of snap.docs) {
+    const eventRef = db.collection('events').doc(doc.data().eventId);
+    const eventDoc = await eventRef.get();
+    const batch = db.batch();
+    batch.delete(doc.ref);
+    // rules側で「参加マーカー削除と同時の-1」のみ許可しているため、同じバッチで減らす
+    if (eventDoc.exists && (eventDoc.data().participants || 0) > 0) {
+      batch.update(eventRef, { participants: firebase.firestore.FieldValue.increment(-1) });
+    }
+    await batch.commit();
+  }
+}
+
+async function deleteMyAvatarImages(uid) {
+  const list = await storage.ref(`avatar-images/${uid}`).listAll();
+  await Promise.all(list.items.map(item => item.delete()));
+}
+
+async function handleAccountDelete(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+  const currentPassword = document.getElementById('account-delete-password').value;
+  const errEl = document.getElementById('account-delete-error');
+  const btn = e.target.querySelector('.auth-submit');
+  errEl.textContent = '';
+  if (!confirm('アカウントと、あなたが投稿・登録したデータを削除します。この操作は取り消せません。よろしいですか？')) return;
+  btn.disabled = true;
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, currentPassword);
+    await currentUser.reauthenticateWithCredential(cred);
+    const uid = currentUser.uid;
+    const tasks = [
+      () => deleteMyDocs(db.collection('posts').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('postLikes').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('presence').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('savedEvents').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('favoriteSpots').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('circleMembers').where('userId', '==', uid)),
+      () => deleteMyDocs(db.collection('friendRequests').where('fromUserId', '==', uid)),
+      () => deleteMyDocs(db.collection('friends').where('userIds', 'array-contains', uid)),
+      () => deleteMyDocs(db.collection('blocks').where('blockerUserId', '==', uid)),
+      () => deleteMyEventParticipations(uid),
+      () => deleteMyAvatarImages(uid),
+    ];
+    for (const task of tasks) {
+      try { await task(); } catch (taskErr) { console.error('account data cleanup error:', taskErr.code, taskErr.message); }
+    }
+    await db.collection('users').doc(uid).delete();
+    await currentUser.delete();
+    userProfile = null;
+    joinedEvents.clear();
+    navigate('home');
+    showToast('アカウントを削除しました');
   } catch (err) {
     errEl.textContent = authErrorMessage(err);
   } finally {

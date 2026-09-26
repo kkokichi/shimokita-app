@@ -18,7 +18,8 @@ window.addEventListener('beforeinstallprompt', e => {
 
 function renderPwaInstallBanner(kind) {
   const el = document.getElementById('pwa-install-banner');
-  if (!el || isStandaloneMode()) return;
+  // iOSアプリ（Capacitor）内ではホーム画面追加の案内は不要（App Store審査でも不適切）
+  if (!el || isStandaloneMode() || (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())) return;
   if (kind === 'android') {
     el.innerHTML = `
       <div class="pwa-install-body">
