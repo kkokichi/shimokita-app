@@ -1,5 +1,17 @@
 // ── NG WORD FILTER（タイムライン・サークル掲示板共通） ──
-const NG_WORDS = ['副業', '権利収入', 'マルチ'];
+// App Store審査ガイドライン1.2（UGCアプリは不適切な投稿を防ぐ仕組みが必須）に対応するため、
+// 勧誘・誹謗中傷・性的な表現・出会い目的の連絡先交換を中心に登録している
+const NG_WORDS = [
+  // 勧誘・スパム
+  '副業', '権利収入', 'マルチ', '不労所得', '投資案件', '稼げる', 'ネットワークビジネス',
+  // 誹謗中傷・脅迫
+  '死ね', '殺す', 'ころす', '消えろ', 'きもい', 'キモい', 'ブス', 'ガイジ', '池沼',
+  // 性的な表現・出会い目的
+  'セックス', 'せっくす', 'エッチしよ', 'ヤリモク', 'やりもく', '援交', '援助交際', 'パパ活', 'ママ活',
+  'セフレ', '出会い系', '裏垢', 'ライン交換', 'LINE交換', 'ID交換', 'カカオ交換',
+];
 function containsNgWord(text) {
-  return NG_WORDS.some(w => text.includes(w));
+  // 全角英数・大文字小文字の違いで回避されないよう正規化してから判定する
+  const normalized = text.normalize('NFKC').toLowerCase();
+  return NG_WORDS.some(w => normalized.includes(w.normalize('NFKC').toLowerCase()));
 }
