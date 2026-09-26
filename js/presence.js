@@ -316,7 +316,7 @@ async function refreshPresenceMarkers() {
         map: gmap,
         title: cluster.entries.length > 1 ? `${cluster.entries.length}人がチェックイン中` : 'チェックイン中',
         icon: {
-          url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+          url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
           scaledSize: new google.maps.Size(32, 32),
         },
         label: {

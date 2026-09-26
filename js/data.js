@@ -74,9 +74,9 @@ const news = [
 ];
 
 const catConfig = {
-  'カフェ':       { color:'#E65100', bg:'#FFF3E0', icon:'☕', pin:'http://maps.google.com/mapfiles/ms/icons/orange-dot.png' },
-  '古着':         { color:'#6A1B9A', bg:'#F3E5F5', icon:'👗', pin:'http://maps.google.com/mapfiles/ms/icons/purple-dot.png' },
-  'サウナ':       { color:'#0D47A1', bg:'#E3F2FD', icon:'♨️', pin:'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'   },
-  'ライブハウス':  { color:'#880E4F', bg:'#FCE4EC', icon:'🎸', pin:'http://maps.google.com/mapfiles/ms/icons/pink-dot.png'   },
-  'カレー':       { color:'#F9A825', bg:'#FFF8E1', icon:'🍛', pin:'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png' },
+  'カフェ':       { color:'#E65100', bg:'#FFF3E0', icon:'☕', pin:'https://maps.google.com/mapfiles/ms/icons/orange-dot.png' },
+  '古着':         { color:'#6A1B9A', bg:'#F3E5F5', icon:'👗', pin:'https://maps.google.com/mapfiles/ms/icons/purple-dot.png' },
+  'サウナ':       { color:'#0D47A1', bg:'#E3F2FD', icon:'♨️', pin:'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'   },
+  'ライブハウス':  { color:'#880E4F', bg:'#FCE4EC', icon:'🎸', pin:'https://maps.google.com/mapfiles/ms/icons/pink-dot.png'   },
+  'カレー':       { color:'#F9A825', bg:'#FFF8E1', icon:'🍛', pin:'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png' },
 };

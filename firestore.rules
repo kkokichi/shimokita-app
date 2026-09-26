@@ -41,11 +41,18 @@ service cloud.firestore {
         ((r.fromUserId == uidA && r.toUserId == uidB) || (r.fromUserId == uidB && r.toUserId == uidA));
     }
 
-    // users: 誰でも閲覧可、本人のみ作成・更新可
+    // users: 誰でも閲覧可、本人のみ作成・更新可。
+    // role（organizer権限）は本人が付与・変更できないようにする（権限昇格の防止）。
+    // organizerの付与はFirebaseコンソールから管理者が行う。
+    // 誰でも閲覧できるため、メールアドレスは保存させない
     match /users/{userId} {
       allow read: if true;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+        !('role' in request.resource.data) &&
+        !('email' in request.resource.data);
+      allow update: if isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) &&
+        !('email' in request.resource.data);
       allow delete: if false;
     }
 

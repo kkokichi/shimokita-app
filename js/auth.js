@@ -5,11 +5,14 @@ let userProfile = null;
 // avatarUrlがあれば画像を、なければ既存の🌿絵文字を表示するフォールバック
 // （js/events.jsのeventBannerEmojiHtmlと同じ考え方。呼び出し側のdivが既に
 // サイズ・背景を持つクラスを付けている前提で、中身だけを返す）
+// avatarUrlは本人が自由に書き換えられる値なので、https以外は無視し、属性値として
+// 安全になるよう " も含めてエスケープする（onerror等の属性注入によるXSS対策）
 function userAvatarHtml(user) {
-  const url = user && user.avatarUrl;
-  return url
-    ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`
-    : '🌿';
+  const url = user && typeof user.avatarUrl === 'string' && /^https:\/\//.test(user.avatarUrl)
+    ? user.avatarUrl : null;
+  if (!url) return '🌿';
+  const safeUrl = url.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<img src="${safeUrl}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`;
 }
 
 async function uploadAvatarImage(file) {
@@ -105,7 +108,8 @@ async function handleProfileSubmit(e) {
       }
       btn.textContent = originalBtnText;
     }
-    const profile = { name, ageRange, hobby, bio, avatarUrl, email: currentUser.email };
+    // usersは誰でも閲覧できるため、メールアドレスは保存しない（表示はcurrentUser.emailを使う）
+    const profile = { name, ageRange, hobby, bio, avatarUrl };
     await db.collection('users').doc(currentUser.uid).set({
       ...profile,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -147,7 +151,7 @@ function renderMyPage(profile) {
   document.getElementById('mypage-avatar').innerHTML = userAvatarHtml(profile);
   document.getElementById('mypage-name').textContent = profile.name;
   document.getElementById('mypage-bio').textContent = profile.bio || `${profile.ageRange}・趣味は${profile.hobby}`;
-  document.getElementById('mypage-meta').textContent = profile.email;
+  document.getElementById('mypage-meta').textContent = currentUser ? currentUser.email : '';
   document.getElementById('mypage-hobby-value').textContent = profile.hobby;
   document.getElementById('menu-organizer').style.display = profile.role === 'organizer' ? 'flex' : 'none';
   renderMyPageJoinedStats();
@@ -343,6 +347,12 @@ auth.onAuthStateChanged(user => {
   }
   db.collection('users').doc(user.uid).get().then(doc => {
     userProfile = doc.exists ? doc.data() : null;
+    // 旧バージョンで公開プロフィールに保存されていたメールアドレスを削除する
+    if (userProfile && 'email' in userProfile) {
+      delete userProfile.email;
+      doc.ref.update({ email: firebase.firestore.FieldValue.delete() })
+        .catch(err => console.error('email cleanup error:', err.code, err.message));
+    }
     renderEvents(); // organizer限定の「＋イベントを作る」ボタン表示をロール判明後に反映
     if (['mypage', 'auth', 'profile-setup'].includes(currentScreen)) {
       openMyPage();
